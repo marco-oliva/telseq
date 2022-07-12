@@ -42,6 +42,8 @@ snakemake -j <number of threads available> --use-conda --conda-frontend mamba
 
 #### Plots
 ```bash
+cd telseq
+
 # Spawn the jupyter notebook for the violin plot
 snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook violin_plot_all_samples.pdf
 
@@ -74,6 +76,8 @@ sbath run.sh
 Here remember that this will run on a node in the cluster so you will need an ssh tunnel to the node to be able to connect to the jupyter notebook.
 
 ```bash
+cd telseq
+
 # Spawn the jupyter notebook for the violin plot
 snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook violin_plot_all_samples.pdf
 

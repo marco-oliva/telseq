@@ -35,7 +35,7 @@ mamba activate telseq
 mkdir -p work_dir/samples work_dir/logs 
 
 # Move the fastq files in the samples directory
-mv <your_data>.fastq[.gz] work_dir/samples
+mv <your_data>.fastq work_dir/samples
 
 # Run the workflow
 snakemake -j <number of threads available> --configfile config.json --use-conda --conda-frontend mamba
@@ -64,7 +64,7 @@ cd argmobrich_analysis
 mkdir -p work_dir/samples work_dir/logs 
 
 # Move the fastq files in the samples directory
-mv <your_data>.fastq[.gz] work_dir/samples
+mv <your_data>.fastq work_dir/samples
 
 # Run the workflow
 sbath run.sh

@@ -301,12 +301,13 @@ rule pass_config_file:
     run:
         import configparser
         with open(output.out_config_file,'w') as configfile_out:
+            # Update config to contain DATABASE info
+            config["DATABASE"] = dict()
+            config["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_full_database_v2.00.fasta"
+            config["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_full_annotations_v2.00.csv"
+            config["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
+            config["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_to_pass = dict(config)
-            config_to_pass["DATABASE"] = dict()
-            config_to_pass["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_full_database_v2.00.fasta"
-            config_to_pass["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_full_annotations_v2.00.csv"
-            config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
-            config_to_pass["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_parser = configparser.ConfigParser()
             config_parser.read_dict(config_to_pass)
             config_parser.write(configfile_out)

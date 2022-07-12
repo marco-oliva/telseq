@@ -11,7 +11,7 @@ import os
 ## Config file and shorthands
 ############################################################
 
-configfile: "config.json"
+configfile: "config/config.json"
 workdir: config["WORKFLOW"]["WORKDIR"]
 
 databases_dir = "databases"
@@ -57,7 +57,7 @@ rule read_lengths:
         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
 
     conda:
-        "envs/deduplication.yaml"
+        "workflow/envs/deduplication.yaml"
     envmodules:
         "python/3.8"
 
@@ -77,7 +77,7 @@ rule read_lengths_from_workdir:
         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
 
     conda:
-        "envs/deduplication.yaml"
+        "workflow/envs/deduplication.yaml"
     envmodules:
         "python/3.8"
 
@@ -105,7 +105,7 @@ rule deduplicate_create_clusters:
         tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}"
 
     conda:
-        "envs/deduplication.yaml"
+        "workflow/envs/deduplication.yaml"
     envmodules:
         "python/3.8"
 
@@ -130,7 +130,7 @@ rule deduplicate_blat:
     threads: config["MISC"]["BLAT_THREADS"]
 
     conda:
-        "envs/deduplication.yaml"
+        "workflow/envs/deduplication.yaml"
     envmodules:
         "blat/20140318"
 
@@ -152,7 +152,7 @@ rule deduplicate_find_duplicates:
         similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"]
 
     conda:
-        "envs/deduplication.yaml"
+        "workflow/envs/deduplication.yaml"
     envmodules:
         "python/3.8"
 
@@ -190,7 +190,7 @@ rule deduplicate:
         deduplicate_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
 
     conda:
-        "envs/deduplication.yaml"
+        "workflow/envs/deduplication.yaml"
     envmodules:
         "python/3.8"
 
@@ -228,7 +228,7 @@ rule align_to_megares:
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
 
     conda:
-        "envs/alignment.yaml"
+        "workflow/envs/alignment.yaml"
     envmodules:
         "python/3.8",
         "minimap/2.21"
@@ -253,7 +253,7 @@ rule align_to_mges:
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
 
     conda:
-        "envs/alignment.yaml"
+        "workflow/envs/alignment.yaml"
     envmodules:
         "python/3.8",
         "minimap/2.21"
@@ -279,7 +279,7 @@ rule align_to_kegg:
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
 
     conda:
-        "envs/alignment.yaml"
+        "workflow/envs/alignment.yaml"
     envmodules:
         "python/3.8",
         "minimap/2.21"
@@ -302,8 +302,11 @@ rule pass_config_file:
         import configparser
         with open(output.out_config_file,'w') as configfile_out:
             config_to_pass = dict(config)
+            config_to_pass["DATABASE"] = dict()
             config_to_pass["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_full_database_v2.00.fasta"
             config_to_pass["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_full_annotations_v2.00.csv"
+            config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
+            config_to_pass["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_parser = configparser.ConfigParser()
             config_parser.read_dict(config_to_pass)
             config_parser.write(configfile_out)
@@ -321,7 +324,7 @@ rule resistome_and_mobilome:
         output_prefix = "{sample_name}.fastq" + DEDUP_STRING
 
     conda:
-        "envs/pipeline.yaml"
+        "workflow/envs/pipeline.yaml"
     envmodules:
         "python/3.8"
 
@@ -357,7 +360,7 @@ rule find_colocalizations:
         output_directory = os.getcwd()
 
     conda:
-        "envs/pipeline.yaml"
+        "workflow/envs/pipeline.yaml"
     envmodules:
         "python/3.8"
 
@@ -385,7 +388,7 @@ rule colocalization_richness:
         find_colocalizations_script = workflow.basedir + "/" + config["SCRIPTS"]["COLOCALIZATIONS_RICHNESS"]
 
     conda:
-        "envs/pipeline.yaml"
+        "workflow/envs/pipeline.yaml"
     envmodules:
         "python/3.8"
 
@@ -418,7 +421,7 @@ rule read_lengths_plot:
         out_plot_name = "{sample_name}" + "_deduplicated_read_lengts_hist.pdf"
 
     conda:
-        "envs/plots.yaml"
+        "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
 
@@ -442,12 +445,12 @@ rule violin_plots_notebook:
         out_plot_name = "violin_plot_all_samples.pdf"
 
     conda:
-        "envs/plots.yaml"
+        "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
 
     notebook:
-        "src/plots_notebooks/violin_notebook.py.ipynb"
+        "workflow/notebooks/violin_notebook.py.ipynb"
 
 
 rule heatmap_notebook:
@@ -464,12 +467,12 @@ rule heatmap_notebook:
         out_plot_name = "heatmap_all_samples.pdf"
 
     conda:
-        "envs/plots.yaml"
+        "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
 
     notebook:
-        "src/plots_notebooks/heatmap_notebook.py.ipynb"
+        "workflow/notebooks/heatmap_notebook.py.ipynb"
 
 
 rule colocalization_visualizations_notebook:
@@ -488,12 +491,12 @@ rule colocalization_visualizations_notebook:
         out_plot_name = "{sample_name}_colocalizations_plot.pdf"
 
     conda:
-        "envs/plots.yaml"
+        "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
 
     notebook:
-        "src/plots_notebooks/colocalizations_notebook.py.ipynb"
+        "workflow/notebooks/colocalizations_notebook.py.ipynb"
 
 ############################################################
 ## Databases
@@ -511,22 +514,65 @@ rule get_megares_v2:
         wget http://megares.meglab.org/download/megares_v2.00/megares_full_annotations_v2.00.csv -O {output.megares_v2_ontology}
         """
 
-rule get_MGEs_DBs:
+
+rule get_plasmid_finder_db:
     output:
-        mges_combined_db = os.path.join(databases_dir,"mges_combined.fa")
+        plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta"
+
+    shell:
+        """
+        mkdir -p {tmp_dir}
+        mkdir -p {databases_dir}
+        cd {tmp_dir}
+        git clone https://bitbucket.org/genomicepidemiology/plasmidfinder_db.git 
+        cd plasmidfinder_db
+        git checkout 9002e7282dd0599b9247f4f700368b8fa64fbaa8
+        cd ../..
+        cat tmp/plasmidfinder_db/*.fsa > {output.plasmid_finder_db}
+        """
+
+rule get_aclame_db:
+    output:
+        aclame_db = databases_dir + "/aclame_db.fasta"
+
+    shell:
+        """
+        touch {output.aclame_db}
+        """
+
+rule get_iceberg_db:
+    output:
+        iceberg_db = databases_dir + "/iceberg_db.fasta"
+
+    shell:
+        """
+        mkdir -p {databases_dir}
+        wget https://bioinfo-mml.sjtu.edu.cn/ICEberg2/download/ICE_seq_all.fas -O {output.iceberg_db}
+        """
+
+rule get_MGEs_DBs:
+    input:
+        plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta",
+        aclame_db = databases_dir + "/aclame_db.fasta",
+        iceberg_db = databases_dir + "/iceberg_db.fasta"
+
+    output:
+        mges_combined_db = databases_dir + "/mges_combined.fasta"
 
     params:
         mges_path = config["DATABASE"]["MGES"]
 
     shell:
         """
-        mkdir -p {databases_dir}
-        cp {params.mges_path} {output.mges_combined_db}
+        echo "" >> {output.mges_combined_db}
+        cat {input.plasmid_finder_db} >> {output.mges_combined_db}
+        cat {input.aclame_db} >> {output.mges_combined_db}
+        cat {input.iceberg_db} >> {output.mges_combined_db}
         """
 
 rule get_KEGG_Prokaryotes_DBs:
     output:
-        kegg_prokaryotes_db = os.path.join(databases_dir,"kegg_genes.fa")
+        kegg_prokaryotes_db = databases_dir + "/kegg_genes.fasta"
 
     params:
         kegg_path = config["DATABASE"]["KEGG"]

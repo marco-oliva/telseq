@@ -246,7 +246,7 @@ rule align_to_megares:
 rule align_to_mges:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
-        mges_database = databases_dir + "/" + "mges_combined.fa"
+        mges_database = databases_dir + "/" + "mges_combined.fasta"
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
@@ -271,7 +271,7 @@ rule align_to_mges:
 rule align_to_kegg:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
-        kegg_database = databases_dir + "/" + "kegg_genes.fa"
+        kegg_database = databases_dir + "/" + "kegg_genes.fasta"
 
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
@@ -479,8 +479,8 @@ rule colocalization_visualizations_notebook:
     input:
         megares_db = databases_dir + "/megares_full_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_full_annotations_v2.00.csv",
-        mges_db = databases_dir + "/mges_combined.fa",
-        kegg_db = databases_dir + "/kegg_genes.fa",
+        mges_db = databases_dir + "/mges_combined.fasta",
+        kegg_db = databases_dir + "/kegg_genes.fasta",
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"]
 

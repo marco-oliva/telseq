@@ -1,0 +1,12 @@
+name: pipeline
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - samtools=1.9
+  - biopython
+  - pysam
+  - scipy
+  - scikit-learn

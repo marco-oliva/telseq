@@ -1,0 +1,19 @@
+name: plots
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - plotly
+dependencies:
+  - python=3.8
+  - blat
+  - matplotlib
+  - biopython
+  - samtools=1.9
+  - pysam
+  - pandas
+  - seaborn
+  - plotly
+  - notebook
+  - nb_conda_kernels
+  - tqdm

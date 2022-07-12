@@ -1,0 +1,71 @@
+{
+  "WORKFLOW" :
+  {
+    "WORKDIR": "./work_dir"
+  },
+
+  "EXTENSION" :
+  {
+    "DUPLICATES" : "_duplicates.csv",
+    "DEDUPLICATED" : "_deduplicated.fastq",
+    "NOT_DEDUPLICATED" : "_NOT_deduplicated.fastq",
+    "A_TO_MEGARES" : "_ato_megaresv2.sam",
+    "A_TO_MGES" : "_ato_MGES.sam",
+    "A_TO_KEGG" : "_ato_KEGG.sam",
+    "RESISTOME_DIVERSITY" : "_amr_diversity.csv",
+    "RESISTOME_RICHNESS" : "_amr_richness.csv",
+    "MOBILOME" : "_mobilome.csv",
+    "COLOCALIZATIONS" : "_colocalizations.csv",
+    "COLOCALIZATIONS_RICHNESS" : "_colocalizations_richness.csv",
+    "GENES_LIST" : "_genes_list.csv",
+    "READS_LENGTH" : "_reads_length.json"
+  },
+
+  "MISC" :
+  {
+    "V2_SKIP_BEGIN" : 3,
+    "V2_SKIP_END" : 66,
+    "GLOBAL_AMR_THRESHOLD" : 0.8,
+    "GLOBAL_MGE_THRESHOLD" : 0.5,
+    "GLOBAL_KEGG_THRESHOLD" : 0.5,
+    "GLOBAL_AMR_THRESHOLD_COLOCALIZATIONS" : 0.8,
+    "GLOBAL_MGE_THRESHOLD_COLOCALIZATIONS" : 0.5,
+    "GLOBAL_KEGG_THRESHOLD_COLOCALIZATIONS" : 0.5,
+    "DEDUPLICATE" : "True",
+    "DEDUP_CLUSTERS" : 200,
+    "BLAT_THREADS" : 4,
+    "DEDUPLICATION_SIMILARITY_THRESHOLD" : 0.9,
+    "RESISTOME_STRATEGY" : "SHORT",
+    "MOBILOME_STRATEGY" : "SHORT",
+    "USE_SECONDARY_ALIGNMENTS" : "True",
+    "MAX_BP_COLOCALIZATIONS_PLOT" : 5000
+  },
+
+  "MINIMAP2" :
+  {
+    "PROFILER" : "/usr/bin/time --verbose",
+    "ALIGNER_PB_OPTION" : "-ax map-pb",
+    "ALIGNER_ONT_OPTION" : "",
+    "ALIGNER_HIFI_OPTION" : "",
+    "THREADS" : 12
+  },
+
+  "SCRIPTS" :
+  {
+    "BASE_PATH" : "",
+    "CLUSTER_READS" : "src/cluster_reads_by_read_length.py",
+    "FIND_DUPLICATES" : "src/find_duplicates_in_cluster.py",
+    "DEDUPLICATE" : "src/deduplicate.py",
+    "GEN_RESISTOME_AND_MOBILOME" : "src/gen_resistome_and_mobilome.py",
+    "FIND_COLOCALIZATIONS" : "src/find_colocalizations.py",
+    "COLOCALIZATIONS_RICHNESS" : "src/colocalization_richness.py",
+    "READS_LENGTH" : "src/read_lengths.py"
+  },
+
+  "STATS" :
+  {
+    "GET_STATS" : "True"
+  }
+}
+
+

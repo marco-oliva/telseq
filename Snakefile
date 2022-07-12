@@ -517,7 +517,7 @@ rule get_megares_v2:
 
 rule get_plasmid_finder_db:
     params:
-        commit = config["PLASMID_FINDER_COMMIT"]
+        commit = config["MISC"]["PLASMID_FINDER_COMMIT"]
 
     output:
         plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta"

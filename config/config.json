@@ -38,7 +38,13 @@
     "RESISTOME_STRATEGY" : "SHORT",
     "MOBILOME_STRATEGY" : "SHORT",
     "USE_SECONDARY_ALIGNMENTS" : "True",
-    "MAX_BP_COLOCALIZATIONS_PLOT" : 5000
+    "MAX_BP_COLOCALIZATIONS_PLOT" : 5000,
+    "KEGG_ORGANISMS" : ["dme", "ath", "sce", "pfa", "eco",
+                        "sty", "hin", "pae", "nme", "hpy",
+                        "rpr", "mlo", "bsu", "sau", "lla",
+                        "spn", "cac", "mge", "mtu", "ctr",
+                        "bbu", "syn", "aae", "mja", "afu",
+                        "pho", "ape"]
   },
 
   "MINIMAP2" :

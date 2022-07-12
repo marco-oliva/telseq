@@ -485,7 +485,7 @@ rule colocalization_visualizations_notebook:
         colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"]
 
     params:
-        config_dict  = config
+        config_dict = config
 
     output:
         out_plot_name = "{sample_name}_colocalizations_plot.pdf"
@@ -562,13 +562,17 @@ rule get_MGEs_DBs:
 
     shell:
         """
+        mkdir -p {databases_dir}
         echo "" >> {output.mges_combined_db}
         cat {input.plasmid_finder_db} >> {output.mges_combined_db}
         cat {input.aclame_db} >> {output.mges_combined_db}
         cat {input.iceberg_db} >> {output.mges_combined_db}
         """
 
-rule get_KEGG_Prokaryotes_DBs:
+rule get_KEGG_DBs:
+    input:
+        config_file = "config.ini"
+
     output:
         kegg_prokaryotes_db = databases_dir + "/kegg_genes.fasta"
 
@@ -583,7 +587,7 @@ rule get_KEGG_Prokaryotes_DBs:
     shell:
         """
         mkdir -p {databases_dir}
-        python3 {params.kegg_script} -o {output.kegg_prokaryotes_db}
+        python3 {params.kegg_script} -o {output.kegg_prokaryotes_db} -c {input.config_file}
         """
 
 ############################################################

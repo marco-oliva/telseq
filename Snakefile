@@ -301,13 +301,12 @@ rule pass_config_file:
     run:
         import configparser
         with open(output.out_config_file,'w') as configfile_out:
-            # Update config to contain DATABASE info
-            config["DATABASE"] = dict()
-            config["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_full_database_v2.00.fasta"
-            config["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_full_annotations_v2.00.csv"
-            config["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
-            config["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_to_pass = dict(config)
+            config_to_pass["DATABASE"] = dict()
+            config_to_pass["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_full_database_v2.00.fasta"
+            config_to_pass["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_full_annotations_v2.00.csv"
+            config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
+            config_to_pass["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_parser = configparser.ConfigParser()
             config_parser.read_dict(config_to_pass)
             config_parser.write(configfile_out)
@@ -436,11 +435,11 @@ rule violin_plots_notebook:
     input:
         megares_db = databases_dir + "/megares_full_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_full_annotations_v2.00.csv",
-        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
+        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS),
+        config_file = "config.ini"
 
     params:
-        samples_list = SAMPLES,
-        config_dict  = config
+        samples_list = SAMPLES
 
     output:
         out_plot_name = "violin_plot_all_samples.pdf"
@@ -458,11 +457,11 @@ rule heatmap_notebook:
     input:
         megares_db = databases_dir + "/megares_full_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_full_annotations_v2.00.csv",
-        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
+        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS),
+        config_file = "config.ini"
 
     params:
-        samples_list = SAMPLES,
-        config_dict  = config
+        samples_list = SAMPLES
 
     output:
         out_plot_name = "heatmap_all_samples.pdf"
@@ -483,10 +482,8 @@ rule colocalization_visualizations_notebook:
         mges_db = databases_dir + "/mges_combined.fasta",
         kegg_db = databases_dir + "/kegg_genes.fasta",
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
-        colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"]
-
-    params:
-        config_dict = config
+        colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
+        config_file = "config.ini"
 
     output:
         out_plot_name = "{sample_name}_colocalizations_plot.pdf"

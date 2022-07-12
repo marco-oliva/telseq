@@ -415,7 +415,7 @@ rule read_lengths_plot:
     params:
         num_of_bins = 100,
         std_deviations = 4,
-        read_lengths_script = workflow.basedir + "/" + "src/plot_read_lengths.py"
+        read_lengths_script = workflow.basedir + "/" + "scripts/plot_read_lengths.py"
 
     output:
         out_plot_name = "{sample_name}" + "_deduplicated_read_lengts_hist.pdf"
@@ -537,6 +537,7 @@ rule get_aclame_db:
 
     shell:
         """
+        mkdir -p {databases_dir}
         touch {output.aclame_db}
         """
 
@@ -559,9 +560,6 @@ rule get_MGEs_DBs:
     output:
         mges_combined_db = databases_dir + "/mges_combined.fasta"
 
-    params:
-        mges_path = config["DATABASE"]["MGES"]
-
     shell:
         """
         echo "" >> {output.mges_combined_db}
@@ -574,13 +572,18 @@ rule get_KEGG_Prokaryotes_DBs:
     output:
         kegg_prokaryotes_db = databases_dir + "/kegg_genes.fasta"
 
+    conda:
+        "workflow/envs/pipeline.yaml"
+    envmodules:
+        "python/3.8"
+
     params:
-        kegg_path = config["DATABASE"]["KEGG"]
+        kegg_script = workflow.basedir + "/" + config["SCRIPTS"]["DOWNLOAD_KEGG"]
 
     shell:
         """
         mkdir -p {databases_dir}
-        cp {params.kegg_path} {output.kegg_prokaryotes_db}
+        python3 {params.kegg_script} -o {output.kegg_prokaryotes_db}
         """
 
 ############################################################

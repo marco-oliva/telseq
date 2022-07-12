@@ -53,13 +53,14 @@
   "SCRIPTS" :
   {
     "BASE_PATH" : "",
-    "CLUSTER_READS" : "src/cluster_reads_by_read_length.py",
-    "FIND_DUPLICATES" : "src/find_duplicates_in_cluster.py",
-    "DEDUPLICATE" : "src/deduplicate.py",
-    "GEN_RESISTOME_AND_MOBILOME" : "src/gen_resistome_and_mobilome.py",
-    "FIND_COLOCALIZATIONS" : "src/find_colocalizations.py",
-    "COLOCALIZATIONS_RICHNESS" : "src/colocalization_richness.py",
-    "READS_LENGTH" : "src/read_lengths.py"
+    "CLUSTER_READS" : "workflow/scripts/cluster_reads_by_read_length.py",
+    "FIND_DUPLICATES" : "workflow/scripts/find_duplicates_in_cluster.py",
+    "DEDUPLICATE" : "workflow/scripts/deduplicate.py",
+    "GEN_RESISTOME_AND_MOBILOME" : "workflow/scripts/gen_resistome_and_mobilome.py",
+    "FIND_COLOCALIZATIONS" : "workflow/scripts/find_colocalizations.py",
+    "COLOCALIZATIONS_RICHNESS" : "workflow/scripts/colocalization_richness.py",
+    "READS_LENGTH" : "workflow/scripts/read_lengths.py",
+    "DOWNLOAD_KEGG" : "workflow/scripts/download_kegg.py"
   },
 
   "STATS" :

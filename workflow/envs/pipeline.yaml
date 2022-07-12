@@ -10,3 +10,5 @@ dependencies:
   - pysam
   - scipy
   - scikit-learn
+  - pandas
+  - tqdm

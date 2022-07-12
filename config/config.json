@@ -44,7 +44,8 @@
                         "rpr", "mlo", "bsu", "sau", "lla",
                         "spn", "cac", "mge", "mtu", "ctr",
                         "bbu", "syn", "aae", "mja", "afu",
-                        "pho", "ape"]
+                        "pho", "ape"],
+    "PLASMID_FINDER_COMMIT" : "9002e7282dd0599b9247f4f700368b8fa64fbaa8"
   },
 
   "MINIMAP2" :

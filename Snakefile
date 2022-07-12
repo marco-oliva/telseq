@@ -516,6 +516,9 @@ rule get_megares_v2:
 
 
 rule get_plasmid_finder_db:
+    params:
+        commit = config["PLASMID_FINDER_COMMIT"]
+
     output:
         plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta"
 
@@ -526,7 +529,7 @@ rule get_plasmid_finder_db:
         cd {tmp_dir}
         git clone https://bitbucket.org/genomicepidemiology/plasmidfinder_db.git 
         cd plasmidfinder_db
-        git checkout 9002e7282dd0599b9247f4f700368b8fa64fbaa8
+        git checkout {params.commit}
         cd ../..
         cat tmp/plasmidfinder_db/*.fsa > {output.plasmid_finder_db}
         """

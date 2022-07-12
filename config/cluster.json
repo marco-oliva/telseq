@@ -1,14 +1,14 @@
 {
 
     "__default__": {
-        "account": "boucher",
-        "qos": "boucher",
+        "account": "<account>",
+        "qos": "<account qos>",
         "cpus-per-task": "1",
         "Nodes": 1,
         "mem": "32gb",
         "runtime": "72:00:00",
         "jobname": "TLS-job",
-        "mail": "marco.oliva@ufl.edu",
+        "mail": "<email>",
         "mail_type": "NONE",
         "out": "logs/log_%j.log",
         "err": "logs/err_%j.log"

@@ -11,7 +11,7 @@ Create the environment for `telseq` and install snakemake.
 ```bash
 conda create -c conda-forge -n mamba_base mamba
 conda activate mamba_base
-mamba create -c conda-forge -c bioconda -n telseq snakemake git git-lfs
+mamba create -c conda-forge -c bioconda -n telseq snakemake git
 mamba activate telseq
 ```
 
@@ -19,8 +19,7 @@ Clone the repository.
 
 ```bash
 mamba activate telseq
-git lfs install
-git clone https://github.com/marco-oliva/argmobrich_analysis.git
+git clone https://github.com/marco-oliva/telseq.git
 ```
 
 ### Usage on local desktop
@@ -28,7 +27,7 @@ git clone https://github.com/marco-oliva/argmobrich_analysis.git
 The `telseq` workflows assumes that the `fastq` files will be stored in a directory called `samples` in the working directory. Here we show the usage and the directories structure that can be used with the default `config.json` file.
 
 ```bash
-cd argmobrich_analysis
+cd telseq
 mamba activate telseq
 
 # Create the directories structure
@@ -38,19 +37,19 @@ mkdir -p work_dir/samples work_dir/logs
 mv <your_data>.fastq work_dir/samples
 
 # Run the workflow
-snakemake -j <number of threads available> --configfile config.json --use-conda --conda-frontend mamba
+snakemake -j <number of threads available> --use-conda --conda-frontend mamba
 ```
 
 #### Plots
 ```bash
 # Spawn the jupyter notebook for the violin plot
-snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit-notebook violin_plot_all_samples.pdf
+snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook violin_plot_all_samples.pdf
 
 # Spawn the jupyter notebook for the resitome heatmap
-snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit-notebook heatmap_all_samples.pdf
+snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook heatmap_all_samples.pdf
 
 # Spawn the jupyter notebook for the colocalizations plot for a specific sample
-snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit-notebook <your sample name>_colocalizations_plot.pdf"
+snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook <your sample name>_colocalizations_plot.pdf"
 ```
 
 ### Usage on slurm cluster
@@ -58,7 +57,7 @@ snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit
 Edit the `cluster.json` file in order to fit your resources.
 
 ```bash
-cd argmobrich_analysis
+cd telseq
 
 # Create the directories structure
 mkdir -p work_dir/samples work_dir/logs 
@@ -67,6 +66,7 @@ mkdir -p work_dir/samples work_dir/logs
 mv <your_data>.fastq work_dir/samples
 
 # Run the workflow
+mkdir -p logs
 sbath run.sh
 ```
 
@@ -75,12 +75,12 @@ Here remember that this will run on a node in the cluster so you will need an ss
 
 ```bash
 # Spawn the jupyter notebook for the violin plot
-snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit-notebook violin_plot_all_samples.pdf
+snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook violin_plot_all_samples.pdf
 
 # Spawn the jupyter notebook for the resitome heatmap
-snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit-notebook heatmap_all_samples.pdf
+snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook heatmap_all_samples.pdf
 
 # Spawn the jupyter notebook for the colocalizations plot for a specific sample
-snakemake --configfile config.json -j1 --use-conda --conda-frontend mamba --edit-notebook <your sample name>_colocalizations_plot.pdf
+snakemake -j1 --use-conda --conda-frontend mamba --edit-notebook <your sample name>_colocalizations_plot.pdf
 ```
 

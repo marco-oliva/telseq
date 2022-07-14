@@ -69,7 +69,7 @@ mv <your_data>.fastq work_dir/samples
 
 # Run the workflow
 mkdir -p logs
-sbath run.sh
+sbatch run.sh
 ```
 
 #### Plots

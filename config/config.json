@@ -1,7 +1,8 @@
 {
   "WORKFLOW" :
   {
-    "WORKDIR": "./work_dir"
+    "WORKDIR": "./work_dir",
+    "SAMPLES_DIR": "samples"
   },
 
   "EXTENSION" :

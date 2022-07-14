@@ -14,6 +14,7 @@ import os
 configfile: "config/config.json"
 workdir: config["WORKFLOW"]["WORKDIR"]
 
+samples_dir = config["WORKFLOW"]["SAMPLES_DIR"]
 databases_dir = "databases"
 tmp_dir = "tmp"
 log_dir = "logs"
@@ -22,7 +23,7 @@ log_dir = "logs"
 ## All rule
 ############################################################
 
-SAMPLES, = glob_wildcards("samples/{sample_name}.fastq")
+SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
 DEDUP_STRING = ""
 if config["MISC"]["DEDUPLICATE"] == "True":
     DEDUP_STRING = config["EXTENSION"]["DEDUPLICATED"]
@@ -51,7 +52,7 @@ rule all:
 
 rule read_lengths:
     input:
-        reads = "samples/{sample_name}.fastq"
+        reads = samples_dir + "/{sample_name}.fastq"
 
     params:
         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
@@ -96,7 +97,7 @@ ruleorder: read_lengths > read_lengths_from_workdir
 
 rule deduplicate_create_clusters:
     input:
-        reads = "samples/{sample_name}.fastq",
+        reads = samples_dir + "/{sample_name}.fastq",
         reads_lengths = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
 
     params:
@@ -183,7 +184,7 @@ rule deduplicate_merge_duplicates_sets:
 
 rule deduplicate:
     input:
-        reads = "samples/{sample_name}.fastq",
+        reads = samples_dir + "/{sample_name}.fastq",
         duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
 
     params:
@@ -204,7 +205,7 @@ rule deduplicate:
 
 rule not_deduplicated_reads:
     input:
-        reads = "samples/{sample_name}.fastq"
+        reads = samples_dir + "/{sample_name}.fastq"
 
     output:
         out_reads = "{sample_name}.fastq" + config["EXTENSION"]["NOT_DEDUPLICATED"]

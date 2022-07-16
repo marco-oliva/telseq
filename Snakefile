@@ -436,8 +436,8 @@ rule violin_plots_notebook:
     input:
         megares_db = databases_dir + "/megares_full_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_full_annotations_v2.00.csv",
-        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS),
-        config_file = "config.ini"
+        config_file = "config.ini",
+        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
 
     params:
         samples_list = SAMPLES
@@ -458,8 +458,8 @@ rule heatmap_notebook:
     input:
         megares_db = databases_dir + "/megares_full_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_full_annotations_v2.00.csv",
-        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS),
-        config_file = "config.ini"
+        config_file = "config.ini",
+        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
 
     params:
         samples_list = SAMPLES

@@ -1,7 +1,7 @@
 ############################################################
 ## Imports
 ############################################################
-import os
+import os, ast
 
 ############################################################
 ## Messages
@@ -14,8 +14,8 @@ import os
 configfile: "config/config.json"
 workdir: config["WORKFLOW"]["WORKDIR"]
 
-samples_dir = config["WORKFLOW"]["SAMPLES_DIR"]
-databases_dir = "databases"
+databases_dir = config["WORKFLOW"]["DATABASES_DIR"]
+samples_dir = "samples"
 tmp_dir = "tmp"
 log_dir = "logs"
 
@@ -221,7 +221,7 @@ rule not_deduplicated_reads:
 rule align_to_megares:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
-        megares_v2_seqs = databases_dir + "/" + "megares_full_database_v2.00.fasta"
+        megares_v2_seqs = ancient(databases_dir + "/" + "megares_full_database_v2.00.fasta")
 
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
@@ -247,7 +247,7 @@ rule align_to_megares:
 rule align_to_mges:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
-        mges_database = databases_dir + "/" + "mges_combined.fasta"
+        mges_database = ancient(databases_dir + "/" + "mges_combined.fasta")
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
@@ -272,7 +272,7 @@ rule align_to_mges:
 rule align_to_kegg:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
-        kegg_database = databases_dir + "/" + "kegg_genes.fasta"
+        kegg_database = ancient(databases_dir + "/" + "kegg_genes.fasta")
 
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
@@ -572,9 +572,6 @@ rule get_MGEs_DBs:
         """
 
 rule get_KEGG_DBs:
-    input:
-        config_file = "config.ini"
-
     output:
         kegg_prokaryotes_db = databases_dir + "/kegg_genes.fasta"
 
@@ -584,12 +581,13 @@ rule get_KEGG_DBs:
         "python/3.8"
 
     params:
-        kegg_script = workflow.basedir + "/" + config["SCRIPTS"]["DOWNLOAD_KEGG"]
+        kegg_script = workflow.basedir + "/" + config["SCRIPTS"]["DOWNLOAD_KEGG"],
+        gense_list = config['MISC']['KEGG_ORGANISMS']
 
     shell:
         """
         mkdir -p {databases_dir}
-        python3 {params.kegg_script} -o {output.kegg_prokaryotes_db} -c {input.config_file}
+        python3 {params.kegg_script} -o {output.kegg_prokaryotes_db} -g {params.gense_list}
         """
 
 ############################################################
@@ -600,6 +598,12 @@ rule clean:
     shell:
         """
         rm -f *.csv *.sam *.json *.pdf *_deduplicated.fastq
-        rm -rf {databases_dir} {tmp_dir}
+        rm -rf {tmp_dir}
         rm -f config.ini
+        """
+
+rule clean_databases:
+    shell:
+        """
+        rm -rf {databases_dir} {tmp_dir}
         """

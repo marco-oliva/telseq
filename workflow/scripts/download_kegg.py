@@ -42,19 +42,15 @@ def download_database(organism_list, out_file_path):
 
 def main():
     parser = argparse.ArgumentParser(description='Cluster reads based on read length')
-    parser.add_argument('-o', help='Output file', type=str, dest='out_file', required=True)
-    parser.add_argument('-c', help='Config file', type=str, dest='config_file', required=True)
+    parser.add_argument('-o', help='Output file.', type=str, dest='out_file', required=True)
+    parser.add_argument('-g', help='KEGG organisms list.', nargs='+', dest='organisms_list', required=True)
     args = parser.parse_args()
 
-    config = configparser.ConfigParser()
-    config.read(args.config_file)
-
     # Organisms List
-    organisms_list = ast.literal_eval(config['MISC']['KEGG_ORGANISMS'])
-    print(organisms_list)
+    print(args.organisms_list)
 
     # Download KEGG's prokaryotes default database
-    download_database(organisms_list, args.out_file)
+    download_database(args.organisms_list, args.out_file)
 
 
 if __name__ == "__main__":

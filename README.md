@@ -84,7 +84,7 @@ sbatch run.sh
 ```
 
 #### Plots
-Here remember that this will run on a node in the cluster so you will need an ssh tunnel to the node to be able to connect to the jupyter notebook.
+This will run on a node in the cluster so you will need an ssh tunnel to the node to be able to connect to the jupyter notebook.
 
 ```bash
 cd telseq

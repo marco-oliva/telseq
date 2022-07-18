@@ -88,14 +88,26 @@ def long_reads_strategy_resistome(config):
 
     csv_rows.append(['Resistome'])
     csv_rows.append(
-        ["MEGARes Gene Header", "Num Reads", "Class", "Num Reads", "Mechanism", "Num Reads", "Group",
+        ["MEGARes Gene Header", "Num Reads", "Group", "Num Reads", "Mechanism", "Num Reads", "Class",
          "Num Reads"])
-
+    start = len(csv_rows)
     for gene in sorted(gene_dict, key=lambda gene: gene_dict[gene], reverse=True):
-        classname = megares_ontology[gene]["class"]
-        mech = megares_ontology[gene]["mechanism"]
-        group = megares_ontology[gene]["group"]
-        csv_rows.append([gene, gene_dict[gene], classname, class_dict[classname], mech, mech_dict[mech], group, group_dict[group]])
+        csv_rows.append([gene, gene_dict[gene]])
+
+    i = start
+    for group in sorted(group_dict, key=lambda group: group_dict[group], reverse=True):
+        csv_rows[i].extend([group, group_dict[group]])
+        i += 1
+
+    i = start
+    for mech in sorted(mech_dict, key=lambda mech: mech_dict[mech], reverse=True):
+        csv_rows[i].extend([mech, mech_dict[mech]])
+        i += 1
+
+    i = start
+    for class_name in sorted(class_dict, key=lambda class_name: class_dict[class_name], reverse=True):
+        csv_rows[i].extend([class_name, class_dict[class_name]])
+        i += 1
 
     # Write diversity tsv
     with open(config['OUTPUT']['OUTPUT_PREFIX'] + '_' + config['MISC']['RESISTOME_STRATEGY'] + "_amr_diversity.csv", 'w') as out_csv:
@@ -118,7 +130,7 @@ def short_reads_strategy_resistome(config):
 
     AMR_mapped_regions_per_read = dict()
 
-    megares_genes = dict()
+    megares_genes = {}
     megares_reference_fasta_filename = config['DATABASE']['MEGARES']
     for rec in SeqIO.parse(megares_reference_fasta_filename, "fasta"):
         megares_genes[rec.name] = np.zeros(len(rec.seq))
@@ -146,7 +158,6 @@ def short_reads_strategy_resistome(config):
         if config['MISC']['USE_SECONDARY_ALIGNMENTS'] not in ['True', 'true'] and read.is_secondary:
             continue
 
-        # update coverage
         for i in range(read.reference_start, read.reference_end):
             megares_genes[read.reference_name][i] = 1
 
@@ -155,7 +166,7 @@ def short_reads_strategy_resistome(config):
         group = megares_ontology[read.reference_name]["group"]
 
         # update gene dict
-        if read.reference_name not in gene_dict:
+        if (not read.reference_name in gene_dict):
             gene_dict[read.reference_name] = 1
             reads_aligned_per_gene[read.reference_name] = set()
             reads_aligned_per_gene[read.reference_name].add(read.query_name)
@@ -189,9 +200,10 @@ def short_reads_strategy_resistome(config):
     covered_genes = set()
     reads_aligned = set()
     for megares_gene, coverage_vector in megares_genes.items():
-        if float(sum(coverage_vector) / len(coverage_vector)) > float(config['MISC']['GLOBAL_AMR_THRESHOLD']):
+        if (float(sum(coverage_vector) / len(coverage_vector)) > float(config['MISC']['GLOBAL_AMR_THRESHOLD'])):
             covered_genes.add(megares_gene)
             reads_aligned.update(reads_aligned_per_gene[megares_gene])
+
 
     # Get only covered genes
     gene_covered_dict = dict()
@@ -209,6 +221,7 @@ def short_reads_strategy_resistome(config):
         mech_covered_dict[mech]         = mech_dict[mech]
         group_covered_dict[group]       = group_dict[group]
 
+
     # Prepare rows of diversity csv
     csv_rows = list()
     csv_rows.append(['Statistics'])
@@ -218,14 +231,26 @@ def short_reads_strategy_resistome(config):
 
     csv_rows.append(['Resistome'])
     csv_rows.append(
-        ["MEGARes Gene Header", "Num Reads", "Class", "Num Reads", "Mechanism", "Num Reads", "Group",
+        ["MEGARes Gene Header", "Num Reads", "Group", "Num Reads", "Mechanism", "Num Reads", "Class",
          "Num Reads"])
-
+    start = len(csv_rows)
     for gene in sorted(gene_covered_dict, key=lambda gene: gene_covered_dict[gene], reverse=True):
-        classname = megares_ontology[gene]["class"]
-        mech = megares_ontology[gene]["mechanism"]
-        group = megares_ontology[gene]["group"]
-        csv_rows.append([gene, gene_covered_dict[gene], classname, class_covered_dict[classname], mech, mech_covered_dict[mech], group, group_covered_dict[group]])
+        csv_rows.append([gene, gene_covered_dict[gene]])
+
+    i = start
+    for group in sorted(group_covered_dict, key=lambda group: group_covered_dict[group], reverse=True):
+        csv_rows[i].extend([group, group_covered_dict[group]])
+        i += 1
+
+    i = start
+    for mech in sorted(mech_covered_dict, key=lambda mech: mech_covered_dict[mech], reverse=True):
+        csv_rows[i].extend([mech, mech_covered_dict[mech]])
+        i += 1
+
+    i = start
+    for class_name in sorted(class_covered_dict, key=lambda class_name: class_covered_dict[class_name], reverse=True):
+        csv_rows[i].extend([class_name, class_covered_dict[class_name]])
+        i += 1
 
     # Write diversity tsv
     with open(config['OUTPUT']['OUTPUT_PREFIX'] + '_' + config['MISC']['RESISTOME_STRATEGY'] + "_amr_diversity.csv", 'w') as out_csv:

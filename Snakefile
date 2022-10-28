@@ -514,8 +514,8 @@ rule get_megares_v2:
     shell:
         """
         mkdir -p {databases_dir}
-        wget http://megares.meglab.org/download/megares_v2.00/megares_full_database_v2.00.fasta -O {output.megares_v2_seqs}
-        wget http://megares.meglab.org/download/megares_v2.00/megares_full_annotations_v2.00.csv -O {output.megares_v2_ontology}
+        wget https://www.meglab.org/downloads/megares_v2.00/megares_full_database_v2.00.fasta -O {output.megares_v2_seqs}
+        wget https://www.meglab.org/downloads/megares_v2.00/megares_full_annotations_v2.00.csv -O {output.megares_v2_ontology}
         """
 
 

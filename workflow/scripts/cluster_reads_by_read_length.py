@@ -33,8 +33,9 @@ def main():
     X = np.array(reads_lengths_list[0])
 
     if len(reads_lengths.values()) < num_clusters:
-        root_logger.error("Number of clusters selected is more than the reads in the input.")
-        exit(1)
+        root_logger.error("Number of clusters selected ({}) is more than the reads in the input ({}).".format(num_clusters, len(reads_lengths.values())))
+        root_logger.error("All reads in one cluster.")
+        num_clusters = 1
 
     kmeans = KMeans(n_clusters=num_clusters).fit(X.reshape((X.shape[0], 1)))
 

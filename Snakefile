@@ -555,7 +555,7 @@ rule get_aclame_db:
     shell:
         """
         mkdir -p {databases_dir}
-        touch {output.aclame_db}
+        wget https://drive.google.com/file/d/1ipiFom9ha_87k-bNzK_nIM4ABO1l_WP9/view?usp=share_link -O {output.aclame_db}
         """
 
 rule get_iceberg_db:

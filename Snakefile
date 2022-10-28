@@ -1,7 +1,7 @@
 ############################################################
 ## Imports
 ############################################################
-import os, ast
+import os, ast, glob
 
 ############################################################
 ## Messages
@@ -103,7 +103,7 @@ rule deduplicate_create_clusters:
     params:
         num_of_clusters = config["MISC"]["DEDUP_CLUSTERS"],
         clustering_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"],
-        tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}"
+        tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}/clusters"
 
     conda:
         "workflow/envs/deduplication.yaml"
@@ -111,8 +111,7 @@ rule deduplicate_create_clusters:
         "python/3.8"
 
     output:
-        clusters = [tmp_dir + "/tmp_{{sample_name}}/{{sample_name}}_{cl_id}.fasta.gz".format(cl_id=cl_id)
-                        for cl_id in range(config["MISC"]["DEDUP_CLUSTERS"])]
+        directory(tmp_dir + "/tmp_{sample_name}/clusters")
 
     shell:
         """
@@ -123,7 +122,7 @@ rule deduplicate_create_clusters:
 
 rule deduplicate_blat:
     input:
-        reads_cluster = tmp_dir + "/tmp_{sample_name}/{sample_name}_{cl_id}.fasta.gz"
+        reads_cluster = tmp_dir + "/tmp_{sample_name}/clusters/{sample_name}_{cl_id}.fasta.gz"
 
     params:
         out_pls_dir = tmp_dir + "/tmp_{sample_name}/pls_files"

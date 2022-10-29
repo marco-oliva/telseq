@@ -32,17 +32,18 @@ def main():
 
     X = np.array(reads_lengths_list[0])
 
+    reads_clusters = dict()
     if len(reads_lengths.values()) < num_clusters:
         root_logger.error("Number of clusters selected ({}) is more than the reads in the input ({}).".format(num_clusters, len(reads_lengths.values())))
-        root_logger.error("All reads in one cluster.")
-        num_clusters = 1
-
-    kmeans = KMeans(n_clusters=num_clusters).fit(X.reshape((X.shape[0], 1)))
-
-    # Associate each read name to its cluster
-    reads_clusters = dict()
-    for j in range(0, kmeans.labels_.shape[0]):
-        reads_clusters[reads_lengths_list[1][j]] = kmeans.labels_[j]
+        root_logger.error("All reads in first cluster.")
+        for read_name, read_length in reads_lengths.items():
+            reads_clusters[read_name] = 0
+    else:
+        kmeans = KMeans(n_clusters=num_clusters).fit(X.reshape((X.shape[0], 1)))
+        # Associate each read name to its cluster
+        reads_clusters = dict()
+        for j in range(0, kmeans.labels_.shape[0]):
+            reads_clusters[reads_lengths_list[1][j]] = kmeans.labels_[j]
 
     # Open clusters file
     clusters_file_handles = list()

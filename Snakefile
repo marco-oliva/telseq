@@ -67,7 +67,7 @@ rule read_lengths:
 
     shell:
         """
-        python3 {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
+        python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
         """
 
 rule read_lengths_from_workdir:
@@ -87,7 +87,7 @@ rule read_lengths_from_workdir:
 
     shell:
         """
-        python3 {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
+        python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
         """
 
 ruleorder: read_lengths > read_lengths_from_workdir
@@ -117,7 +117,7 @@ rule deduplicate_create_clusters:
     shell:
         """
         mkdir -p {params.tmp_dir_clusters}
-        python3 {params.clustering_script} -r {input.reads} -o {params.tmp_dir_clusters} \
+        python {params.clustering_script} -r {input.reads} -o {params.tmp_dir_clusters} \
             -n {params.num_of_clusters} -l {input.reads_lengths}
         """
 
@@ -162,7 +162,7 @@ rule deduplicate_find_duplicates:
 
     shell:
         """
-        python3 {params.find_duplicates_script} -p {input.pls_file} -s {params.similarity_threshold} > {output.out_duplicates_csv}
+        python {params.find_duplicates_script} -p {input.pls_file} -s {params.similarity_threshold} > {output.out_duplicates_csv}
         """
 
 rule deduplicate_merge_duplicates_sets:
@@ -200,7 +200,7 @@ rule deduplicate:
 
     shell:
         """
-        python3 {params.deduplicate_script} -r {input.reads} -d {input.duplicates_csv} > {output.deduplicated_reads}
+        python {params.deduplicate_script} -r {input.reads} -d {input.duplicates_csv} > {output.deduplicated_reads}
         """
 
 rule not_deduplicated_reads:
@@ -338,7 +338,7 @@ rule resistome_and_mobilome:
 
     shell:
         """
-        python3 {params.resistome_mobilome_script} \
+        python {params.resistome_mobilome_script} \
             -r {wildcards.sample_name}.fastq \
             -a {input.megares_sam} \
             -m {input.mges_sam} \
@@ -370,7 +370,7 @@ rule find_colocalizations:
 
     shell:
         """
-        python3 {params.find_colocalizations_script} \
+        python {params.find_colocalizations_script} \
             -r {input.reads} \
             --arg {input.megares_sam} \
             --mge {input.mges_sam} \
@@ -398,7 +398,7 @@ rule colocalization_richness:
 
     shell:
         """
-        python3 {params.find_colocalizations_script} \
+        python {params.find_colocalizations_script} \
             -i {input.colocalizations} \
             -c {input.config_file} \
             > {output.colocalizations_richness}
@@ -428,7 +428,7 @@ rule read_lengths_plot:
 
     shell:
         """
-        python3 {params.read_lengths_script} -i {input.reads} -s {params.std_deviations} -b {params.num_of_bins} \
+        python {params.read_lengths_script} -i {input.reads} -s {params.std_deviations} -b {params.num_of_bins} \
             -o {output.out_plot_name} --title {wildcards.sample_name}_deduplicated
         """
 

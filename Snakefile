@@ -601,7 +601,7 @@ rule get_MGEs_DBs:
 
 rule get_KEGG_DBs:
     output:
-        kegg_prokaryotes_db = databases_dir + "/kegg_genes.fasta"
+        touch(databases_dir + "/kegg_genes.fasta")
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
@@ -609,7 +609,6 @@ rule get_KEGG_DBs:
     shell:
         """
         mkdir -p {databases_dir}
-        gdown 'https://drive.google.com/file/d/18Enz_L2kiCGmPQYd6cUw-JnHJQa4tnzk/view?usp=sharing' --fuzzy -O {output.kegg_prokaryotes_db}
         """
 
 ############################################################

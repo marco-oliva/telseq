@@ -572,7 +572,8 @@ rule get_iceberg_db:
     shell:
         """
         mkdir -p {databases_dir}
-        wget https://bioinfo-mml.sjtu.edu.cn/ICEberg2/download/ICE_seq_all.fas -O {output.iceberg_db}
+        gdown 'https://drive.google.com/file/d/14MNE_738gIgmQU68y-529DitW_zqxIXy/view?usp=sharing' --fuzzy -O {output.iceberg_db}
+        # wget https://bioinfo-mml.sjtu.edu.cn/ICEberg2/download/ICE_seq_all.fas -O {output.iceberg_db}
         """
 
 rule get_MGEs_DBs:
@@ -601,20 +602,14 @@ rule get_MGEs_DBs:
 rule get_KEGG_DBs:
     output:
         kegg_prokaryotes_db = databases_dir + "/kegg_genes.fasta"
-
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
         "python/3.8"
-
-    params:
-        kegg_script = workflow.basedir + "/" + config["SCRIPTS"]["DOWNLOAD_KEGG"],
-        gense_list = config['MISC']['KEGG_ORGANISMS']
-
     shell:
         """
         mkdir -p {databases_dir}
-        python3 {params.kegg_script} -o {output.kegg_prokaryotes_db} -g {params.gense_list}
+        gdown 'https://drive.google.com/file/d/18Enz_L2kiCGmPQYd6cUw-JnHJQa4tnzk/view?usp=sharing' --fuzzy -O {output.kegg_prokaryotes_db}
         """
 
 ############################################################

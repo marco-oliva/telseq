@@ -1,2 +1,3 @@
 .snakemake/*
 work_dir/*
+workflow/scripts/__pycache__/*

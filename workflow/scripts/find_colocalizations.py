@@ -87,21 +87,24 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
     logger.info("Reading KEGG alignment files")
     kegg_positions = dict()
     read_to_kegg = dict()
-    with pysam.AlignmentFile(to_kegg_path, "r") as to_kegg_samfile:
-        for read in to_kegg_samfile:
-            if read.is_unmapped:
-                continue
+    try:
+        with pysam.AlignmentFile(to_kegg_path, "r") as to_kegg_samfile:
+            for read in to_kegg_samfile:
+                if read.is_unmapped:
+                    continue
 
-            if config['MISC']['USE_SECONDARY_ALIGNMENTS'] not in ['True', 'true'] and read.is_secondary:
-                continue
+                if config['MISC']['USE_SECONDARY_ALIGNMENTS'] not in ['True', 'true'] and read.is_secondary:
+                    continue
 
-            # Check coverage
-            if (read.reference_length / (kegg_gene_lengths[read.reference_name])) > float(config['MISC']['GLOBAL_KEGG_THRESHOLD_COLOCALIZATIONS']):
-                if read.query_name not in read_to_kegg:
-                    read_to_kegg[read.query_name] = list()
-                    kegg_positions[read.query_name] = list()
-                kegg_positions[read.query_name].append([read.query_alignment_start, read.query_alignment_end])
-                read_to_kegg[read.query_name].append(read.reference_name)
+                # Check coverage
+                if (read.reference_length / (kegg_gene_lengths[read.reference_name])) > float(config['MISC']['GLOBAL_KEGG_THRESHOLD_COLOCALIZATIONS']):
+                    if read.query_name not in read_to_kegg:
+                        read_to_kegg[read.query_name] = list()
+                        kegg_positions[read.query_name] = list()
+                    kegg_positions[read.query_name].append([read.query_alignment_start, read.query_alignment_end])
+                    read_to_kegg[read.query_name].append(read.reference_name)
+    except ValueError:
+        print("--- Skipped KEGG ---")
 
     # Open aligned to MGEs
     logger.info("Reading MGEs alignment files")

@@ -104,7 +104,8 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
                     kegg_positions[read.query_name].append([read.query_alignment_start, read.query_alignment_end])
                     read_to_kegg[read.query_name].append(read.reference_name)
     except ValueError:
-        print("--- Skipped KEGG ---")
+        pass
+        # print("--- Skipped KEGG ---")
 
     # Open aligned to MGEs
     logger.info("Reading MGEs alignment files")

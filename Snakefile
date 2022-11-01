@@ -567,7 +567,7 @@ rule get_iceberg_db:
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
-        "python/3.8"
+        "python/3.10"
 
     shell:
         """
@@ -588,7 +588,7 @@ rule get_MGEs_DBs:
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
-        "python/3.8"
+        "python/3.10"
 
     shell:
         """

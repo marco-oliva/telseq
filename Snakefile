@@ -23,7 +23,11 @@ log_dir = "logs"
 ## All rule
 ############################################################
 
-SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
+if config["WORKFLOW"]["READS"] == "long":
+    SAMPLES, = glob_wildcards("samples/{sample_name}.fastq")
+elif config["WORKFLOW"]["READS"] == "short":
+    SAMPLES, = glob_wildcards("samples/{sample_name}_R1.fastq.gz")
+
 DEDUP_STRING = ""
 if config["MISC"]["DEDUPLICATE"] == "True":
     DEDUP_STRING = config["EXTENSION"]["DEDUPLICATED"]
@@ -50,195 +54,224 @@ rule all:
 ############################################################
 # Utils
 
-rule read_lengths:
-    input:
-        reads = samples_dir + "/{sample_name}.fastq"
+if config["WORKFLOW"]["READS"] == "short":
+    rule meta_spades_assembly:
+        input:
+            f_reads = samples_dir + "/{sample_name}_R1.fastq",
+            r_reads = samples_dir + "/{sample_name}_R2.fastq"
+        params:
+            kmers = confgig["SPADES"]["KMERS"],
+            memory = config["SPADES"]["MEMORY"],
+            phred = config["SPADES"]["PHRED"]
+        conda:
+            "workflow/envs/assembly.yaml"
+        envmodules:
+            "python/3.8",
+            "spades/3.15.3"
+        threads:
+            config["SPADES"]["THREADS"]
+        output:
+            temp("/tmp_{sample_name}/spades_files/")
+        shell:
+            """
+            spades.py --meta \
+            --phred-offset {params.phred} \
+            -t {threads} \
+            -m {params.memory} \
+            -k {params.kmers} \
+            -1 {input.f_reads} \
+            -2 {input.r_reads} \
+            -o {output}
+            """
 
-    params:
-        read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
+    rule short_read_lengths:
+        input:
+            reads = "/tmp_{sample_name}/spades_files/scaffolds.fasta"
+        params:
+            read_lengths_script = 
+                workflow.basedir 
+                + "/" + config["SCRIPTS"]["READS_LENGTH"]
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "python/3.8"
+        output:
+            read_lenghts_json = 
+                "{sample_name}.fastq" 
+                + config["EXTENSION"]["READS_LENGTH"]
+        shell:
+            """
+            python3 \
+            {params.read_lengths_script} \
+            {input.reads} > {output.read_lenghts_json}
+            """
 
-    conda:
-        "workflow/envs/deduplication.yaml"
-    envmodules:
-        "python/3.8"
+    DEDUP_READS = "/tmp_{sample_name}/spades_files/scaffolds.fasta"
 
-    output:
-        read_lenghts_json = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+elif config["WORKFLOW"]["READS"] == "long":
+    rule long_read_lengths:
+        input:
+            reads = samples_dir + "/{sample_name}.fastq"
+        params:
+            read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "python/3.8"
+        output:
+            read_lenghts_json = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+        shell:
+            """
+            python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
+            """
 
-    shell:
-        """
-        python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
-        """
+    # rule read_lengths_from_workdir:
+    #     input:
+    #         reads = "{sample_name}.fastq"
 
-rule read_lengths_from_workdir:
-    input:
-        reads = "{sample_name}.fastq"
+    #     params:
+    #         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
 
-    params:
-        read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
+    #     conda:
+    #         "workflow/envs/deduplication.yaml"
+    #     envmodules:
+    #         "python/3.8"
 
-    conda:
-        "workflow/envs/deduplication.yaml"
-    envmodules:
-        "python/3.8"
+    #     output:
+    #         read_lenghts_json = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
 
-    output:
-        read_lenghts_json = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+    #     shell:
+    #         """
+    #         python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
+    #         """
 
-    shell:
-        """
-        python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
-        """
+    # ruleorder: read_lengths > read_lengths_from_workdir
 
-ruleorder: read_lengths > read_lengths_from_workdir
+    ############################################################
+    # Deduplication
 
-############################################################
-# Deduplication
+    rule deduplicate_create_clusters:
+        input:
+            reads = samples_dir + "/{sample_name}.fastq",
+            reads_lengths = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+        params:
+            num_of_clusters = config["MISC"]["DEDUP_CLUSTERS"],
+            clustering_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"],
+            tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}"
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "python/3.8"
+        output:
+            clusters = [tmp_dir + "/tmp_{{sample_name}}/{{sample_name}}_{cl_id}.fasta.gz".format(cl_id=cl_id)
+                            for cl_id in range(config["MISC"]["DEDUP_CLUSTERS"])]
+        shell:
+            """
+            mkdir -p {params.tmp_dir_clusters}
+            python {params.clustering_script} -r {input.reads} -o {params.tmp_dir_clusters} \
+                -n {params.num_of_clusters} -l {input.reads_lengths}
+            """
 
-rule deduplicate_create_clusters:
-    input:
-        reads = samples_dir + "/{sample_name}.fastq",
-        reads_lengths = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+    rule deduplicate_blat:
+        input:
+            reads_cluster = tmp_dir + "/tmp_{sample_name}/{sample_name}_{cl_id}.fasta.gz"
+        params:
+            out_pls_dir = tmp_dir + "/tmp_{sample_name}/pls_files"
+        threads:
+            config["MISC"]["BLAT_THREADS"]
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "blat/20140318"
+        output:
+            out_pls = tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
+        shell:
+            """
+            mkdir -p {params.out_pls_dir}
+            blat {input.reads_cluster} {input.reads_cluster} {output.out_pls}
+            """
 
-    params:
-        num_of_clusters = config["MISC"]["DEDUP_CLUSTERS"],
-        clustering_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"],
-        tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}"
+    rule deduplicate_find_duplicates:
+        input:
+            pls_file = tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
+        params:
+            find_duplicates_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"],
+            similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"]
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "python/3.8"
+        output:
+            out_duplicates_csv = tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}_duplicates.csv"
+        shell:
+            """
+            python {params.find_duplicates_script} -p {input.pls_file} -s {params.similarity_threshold} > {output.out_duplicates_csv}
+            """
 
-    conda:
-        "workflow/envs/deduplication.yaml"
-    envmodules:
-        "python/3.8"
+    rule deduplicate_merge_duplicates_sets:
+        input:
+            expand(tmp_dir + "/tmp_{{sample_name}}/pls_files/{cl_id}_duplicates.csv", cl_id=range(config["MISC"]["DEDUP_CLUSTERS"]))
+        output:
+            out_duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
+        run:
+            import csv
+            with open(output[0], "w") as out_csv_handle:
+                csv_writer = csv.writer(out_csv_handle)
+                for cluster_duplicate_file in input:
+                    with open(cluster_duplicate_file) as csv_handle:
+                        csv_reader = csv.reader(csv_handle)
+                        for row in csv_reader:
+                            csv_writer.writerow(row)
 
-    output:
-        clusters = [tmp_dir + "/tmp_{{sample_name}}/{{sample_name}}_{cl_id}.fasta.gz".format(cl_id=cl_id)
-                        for cl_id in range(config["MISC"]["DEDUP_CLUSTERS"])]
+    rule deduplicate:
+        input:
+            reads = samples_dir + "/{sample_name}.fastq",
+            duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
+        params:
+            deduplicate_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "python/3.8"
+        output:
+            deduplicated_reads = "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
+        shell:
+            """
+            python {params.deduplicate_script} -r {input.reads} -d {input.duplicates_csv} > {output.deduplicated_reads}
+            """
 
-    shell:
-        """
-        mkdir -p {params.tmp_dir_clusters}
-        python {params.clustering_script} -r {input.reads} -o {params.tmp_dir_clusters} \
-            -n {params.num_of_clusters} -l {input.reads_lengths}
-        """
+    rule not_deduplicated_reads:
+        input:
+            reads = samples_dir + "/{sample_name}.fastq"
+        output:
+            out_reads = "{sample_name}.fastq" + config["EXTENSION"]["NOT_DEDUPLICATED"]
+        shell:
+            """
+            ln -s {input.reads} {output.out_reads}
+            """
 
-rule deduplicate_blat:
-    input:
-        reads_cluster = tmp_dir + "/tmp_{sample_name}/{sample_name}_{cl_id}.fasta.gz"
-
-    params:
-        out_pls_dir = tmp_dir + "/tmp_{sample_name}/pls_files"
-
-    threads: config["MISC"]["BLAT_THREADS"]
-
-    conda:
-        "workflow/envs/deduplication.yaml"
-    envmodules:
-        "blat/20140318"
-
-    output:
-        out_pls = tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
-
-    shell:
-        """
-        mkdir -p {params.out_pls_dir}
-        blat {input.reads_cluster} {input.reads_cluster} {output.out_pls}
-        """
-
-rule deduplicate_find_duplicates:
-    input:
-        pls_file = tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
-
-    params:
-        find_duplicates_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"],
-        similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"]
-
-    conda:
-        "workflow/envs/deduplication.yaml"
-    envmodules:
-        "python/3.8"
-
-    output:
-        out_duplicates_csv = tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}_duplicates.csv"
-
-    shell:
-        """
-        python {params.find_duplicates_script} -p {input.pls_file} -s {params.similarity_threshold} > {output.out_duplicates_csv}
-        """
-
-rule deduplicate_merge_duplicates_sets:
-    input:
-        expand(tmp_dir + "/tmp_{{sample_name}}/pls_files/{cl_id}_duplicates.csv", cl_id=range(config["MISC"]["DEDUP_CLUSTERS"]))
-
-    output:
-        out_duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
-
-    run:
-        import csv
-        with open(output[0], "w") as out_csv_handle:
-            csv_writer = csv.writer(out_csv_handle)
-            for cluster_duplicate_file in input:
-                with open(cluster_duplicate_file) as csv_handle:
-                    csv_reader = csv.reader(csv_handle)
-                    for row in csv_reader:
-                        csv_writer.writerow(row)
-
-rule deduplicate:
-    input:
-        reads = samples_dir + "/{sample_name}.fastq",
-        duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
-
-    params:
-        deduplicate_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
-
-    conda:
-        "workflow/envs/deduplication.yaml"
-    envmodules:
-        "python/3.8"
-
-    output:
-        deduplicated_reads = "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
-
-    shell:
-        """
-        python {params.deduplicate_script} -r {input.reads} -d {input.duplicates_csv} > {output.deduplicated_reads}
-        """
-
-rule not_deduplicated_reads:
-    input:
-        reads = samples_dir + "/{sample_name}.fastq"
-
-    output:
-        out_reads = "{sample_name}.fastq" + config["EXTENSION"]["NOT_DEDUPLICATED"]
-
-    shell:
-        """
-        ln -s {input.reads} {output.out_reads}
-        """
+    DEDUP_READS = "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
 
 #################################################e###########s
 # Alignment
 
 rule align_to_megares:
     input:
-        reads = "{sample_name}.fastq" + DEDUP_STRING,
+        reads = DEDUP_READS,
         megares_v2_seqs = ancient(databases_dir + "/" + "megares_modified_database_v2.00.fasta")
-
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
-
     conda:
         "workflow/envs/alignment.yaml"
     envmodules:
         "python/3.8",
         "minimap/2.21"
-
-    threads: config["MINIMAP2"]["THREADS"]
-
+    threads:
+        config["MINIMAP2"]["THREADS"]
     output:
         megares_out_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"]
-
     shell:
         """
         minimap2 -t {threads} {params.minimap_flags} {input.megares_v2_seqs} {input.reads} -o {output.megares_out_sam}
@@ -246,24 +279,21 @@ rule align_to_megares:
 
 rule align_to_mges:
     input:
-        reads = "{sample_name}.fastq" + DEDUP_STRING,
+        reads = DEDUP_READS,
         mges_database = ancient(databases_dir + "/" + "mges_combined.fasta")
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
-
     conda:
         "workflow/envs/alignment.yaml"
     envmodules:
         "python/3.8",
         "minimap/2.21"
-
-    threads: config["MINIMAP2"]["THREADS"]
-
+    threads:
+        config["MINIMAP2"]["THREADS"]
     output:
         mges_out_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"]
-
     shell:
         """
         minimap2 -t {threads} {params.minimap_flags} {input.mges_database} {input.reads} -o {output.mges_out_sam}
@@ -271,25 +301,21 @@ rule align_to_mges:
 
 rule align_to_kegg:
     input:
-        reads = "{sample_name}.fastq" + DEDUP_STRING,
+        reads = DEDUP_READS,
         kegg_database = ancient(databases_dir + "/" + "kegg_genes.fasta")
-
     params:
         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
-
     conda:
         "workflow/envs/alignment.yaml"
     envmodules:
         "python/3.8",
         "minimap/2.21"
-
-    threads: config["MINIMAP2"]["THREADS"]
-
+    threads:
+        config["MINIMAP2"]["THREADS"]
     output:
         kegg_out_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"]
-
     shell:
         """
         minimap2 -t {threads} {params.minimap_flags} {input.kegg_database} {input.reads} -o {output.kegg_out_sam}
@@ -298,7 +324,6 @@ rule align_to_kegg:
 rule pass_config_file:
     output:
         out_config_file = "config.ini"
-
     run:
         import configparser
         with open(output.out_config_file,'w') as configfile_out:
@@ -312,6 +337,10 @@ rule pass_config_file:
             config_parser.read_dict(config_to_pass)
             config_parser.write(configfile_out)
 
+
+#### HERE #### TODO
+# where are the input reads for this coming from? need to ask marco
+# where are the deduplicated read lengths coming from? There is no rule that generates this output...
 rule resistome_and_mobilome:
     input:
         megares_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
@@ -319,23 +348,19 @@ rule resistome_and_mobilome:
         reads_lenght = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         config_file = "config.ini"
-
     params:
         resistome_mobilome_script = workflow.basedir + "/" + config["SCRIPTS"]["GEN_RESISTOME_AND_MOBILOME"],
         output_prefix = "{sample_name}.fastq" + DEDUP_STRING
-
     conda:
         "workflow/envs/pipeline.yaml"
     envmodules:
         "python/3.8"
-
     output:
         resistome_richness = "{sample_name}.fastq" + DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"]
                                                     + config["EXTENSION"]["RESISTOME_RICHNESS"],
         resistome_diversity = "{sample_name}.fastq" + DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"]
                                                      + config["EXTENSION"]["RESISTOME_DIVERSITY"],
         mobilome = "{sample_name}.fastq" + DEDUP_STRING + "_" + config["MISC"]["MOBILOME_STRATEGY"] + config["EXTENSION"]["MOBILOME"]
-
     shell:
         """
         python {params.resistome_mobilome_script} \
@@ -348,26 +373,22 @@ rule resistome_and_mobilome:
 
 rule find_colocalizations:
     input:
-        reads = "{sample_name}.fastq" + DEDUP_STRING,
+        reads = DEDUP_READS,
         megares_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
         mges_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"],
         kegg_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"],
         reads_lenght = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         config_file = "config.ini"
-
     params:
         find_colocalizations_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_COLOCALIZATIONS"],
         output_directory = os.getcwd()
-
     conda:
         "workflow/envs/pipeline.yaml"
     envmodules:
         "python/3.8"
-
     output:
         colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"]
-
     shell:
         """
         python {params.find_colocalizations_script} \
@@ -384,18 +405,14 @@ rule colocalization_richness:
     input:
         colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
         config_file = "config.ini"
-
     params:
         find_colocalizations_script = workflow.basedir + "/" + config["SCRIPTS"]["COLOCALIZATIONS_RICHNESS"]
-
     conda:
         "workflow/envs/pipeline.yaml"
     envmodules:
         "python/3.8"
-
     output:
         colocalizations_richness = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS_RICHNESS"]
-
     shell:
         """
         python {params.find_colocalizations_script} \
@@ -411,21 +428,17 @@ rule colocalization_richness:
 
 rule read_lengths_plot:
     input:
-        reads = "{sample_name}.fastq" + DEDUP_STRING
-
+        reads = DEDUP_READS
     params:
         num_of_bins = 100,
         std_deviations = 4,
         read_lengths_script = workflow.basedir + "/" + "scripts/plot_read_lengths.py"
-
     output:
         out_plot_name = "{sample_name}" + "_deduplicated_read_lengts_hist.pdf"
-
     conda:
         "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
-
     shell:
         """
         python {params.read_lengths_script} -i {input.reads} -s {params.std_deviations} -b {params.num_of_bins} \
@@ -438,18 +451,14 @@ rule violin_plots_notebook:
         megares_annotation = databases_dir + "/megares_modified_annotations_v2.00.csv",
         config_file = "config.ini",
         data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
-
     params:
         samples_list = SAMPLES
-
     output:
         out_plot_name = "violin_plot_all_samples.pdf"
-
     conda:
         "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
-
     notebook:
         "workflow/notebooks/violin_notebook.py.ipynb"
 
@@ -460,18 +469,14 @@ rule heatmap_notebook:
         megares_annotation = databases_dir + "/megares_modified_annotations_v2.00.csv",
         config_file = "config.ini",
         data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
-
     params:
         samples_list = SAMPLES
-
     output:
         out_plot_name = "heatmap_all_samples.pdf"
-
     conda:
         "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
-
     notebook:
         "workflow/notebooks/heatmap_notebook.py.ipynb"
 
@@ -485,15 +490,12 @@ rule colocalization_visualizations_notebook:
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
         config_file = "config.ini"
-
     output:
         out_plot_name = "{sample_name}_colocalizations_plot.pdf"
-
     conda:
         "workflow/envs/plots.yaml"
     envmodules:
         "python/3.8"
-
     notebook:
         "workflow/notebooks/colocalizations_notebook.py.ipynb"
 

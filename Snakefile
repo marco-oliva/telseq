@@ -505,34 +505,31 @@ rule get_megares_v2:
     output:
         megares_v2_seqs = os.path.join(databases_dir,"megares_modified_database_v2.00.fasta"),
         megares_v2_ontology = os.path.join(databases_dir,"megares_modified_annotations_v2.00.csv")
-
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
         "python/3.8"
-
     shell:
         """
         mkdir -p {databases_dir}
-        cd {databases_dir}
-        wget https://www.meglab.org/downloads/megares_v2.00.zip
-        unzip megares_v2.00.zip
-        rm megares_v2.00.zip
+        wget \
+        https://www.meglab.org/downloads/megares_v3.00/megares_database_v3.00.fasta \
+        -O {output.megares_v2_seqs}
+        wget \
+        https://www.meglab.org/downloads/megares_v3.00/megares_annotations_v3.00.csv \
+        -O {output.megares_v2_ontology}
         """
 
 
 rule get_plasmid_finder_db:
     params:
         commit = config["MISC"]["PLASMID_FINDER_COMMIT"]
-
     output:
         plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta"
-
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
         "python/3.8"
-
     shell:
         """
         mkdir -p {tmp_dir}
@@ -548,12 +545,10 @@ rule get_plasmid_finder_db:
 rule get_aclame_db:
     output:
         aclame_db = databases_dir + "/aclame_db.fasta"
-
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
         "python/3.8"
-
     shell:
         """
         mkdir -p {databases_dir}
@@ -563,12 +558,10 @@ rule get_aclame_db:
 rule get_iceberg_db:
     output:
         iceberg_db = databases_dir + "/iceberg_db.fasta"
-
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
         "python/3.10"
-
     shell:
         """
         mkdir -p {databases_dir}
@@ -584,12 +577,10 @@ rule get_MGEs_DBs:
 
     output:
         mges_combined_db = databases_dir + "/mges_combined.fasta"
-
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
         "python/3.10"
-
     shell:
         """
         mkdir -p {databases_dir}

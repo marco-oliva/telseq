@@ -525,7 +525,7 @@ rule get_plasmid_finder_db:
     params:
         commit = config["MISC"]["PLASMID_FINDER_COMMIT"]
     output:
-        plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta"
+        plasmid_finder_db = temp(databases_dir + "/plasmid_finder_db.fasta")
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
@@ -544,7 +544,7 @@ rule get_plasmid_finder_db:
 
 rule get_aclame_db:
     output:
-        aclame_db = databases_dir + "/aclame_db.fasta"
+        aclame_db = temp(databases_dir + "/aclame_db.fasta")
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:
@@ -557,7 +557,7 @@ rule get_aclame_db:
 
 rule get_iceberg_db:
     output:
-        iceberg_db = databases_dir + "/iceberg_db.fasta"
+        iceberg_db = temp(databases_dir + "/iceberg_db.fasta")
     conda:
         "workflow/envs/download_databases.yaml"
     envmodules:

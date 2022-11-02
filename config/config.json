@@ -58,6 +58,14 @@
     "THREADS" : 12
   },
 
+  "SPADES" :
+  {
+    "THREADS" : 32,
+    "MEMORY" : "128",
+    "PHRED" : "33",
+    "KMERS" : "21,33,55,77,127"
+  },
+
   "SCRIPTS" :
   {
     "BASE_PATH" : "",

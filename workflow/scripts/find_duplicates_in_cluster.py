@@ -41,11 +41,11 @@ def main():
                             duplication_sets[-1].add(qresult.id)
                             duplication_sets[-1].add(hit.id)
 
-        non_singleton_dup_sets = [dup_set for dup_set in duplication_sets if len(dup_set) > 1]
-        # append dup set to tsv
-        tsv_handle = sys.stdout
-        tsv_writer = csv.writer(tsv_handle)
-        tsv_writer.writerows(sorted(non_singleton_dup_sets, key=lambda dup_set: len(dup_set), reverse=True))
+    non_singleton_dup_sets = [dup_set for dup_set in duplication_sets if len(dup_set) > 1]
+    # append dup set to tsv
+    tsv_handle = sys.stdout
+    tsv_writer = csv.writer(tsv_handle)
+    tsv_writer.writerows(sorted(non_singleton_dup_sets, key=lambda dup_set: len(dup_set), reverse=True))
 
 if __name__ == "__main__":
     main()

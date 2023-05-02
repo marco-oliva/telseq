@@ -125,27 +125,27 @@ elif config["WORKFLOW"]["READS"] == "long":
             python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
             """
 
-    # rule read_lengths_from_workdir:
-    #     input:
-    #         reads = "{sample_name}.fastq"
+    rule read_lengths_from_workdir:
+        input:
+            reads = "{sample_name}.fastq"
 
-    #     params:
-    #         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
+        params:
+            read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
 
-    #     conda:
-    #         "workflow/envs/deduplication.yaml"
-    #     envmodules:
-    #         "python/3.8"
+        conda:
+            "workflow/envs/deduplication.yaml"
+        envmodules:
+            "python/3.8"
 
-    #     output:
-    #         read_lenghts_json = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+        output:
+            read_lenghts_json = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
 
-    #     shell:
-    #         """
-    #         python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
-    #         """
+        shell:
+            """
+            python {params.read_lengths_script} {input.reads} > {output.read_lenghts_json}
+            """
 
-    # ruleorder: read_lengths > read_lengths_from_workdir
+    ruleorder: read_lengths > read_lengths_from_workdir
 
     ############################################################
     # Deduplication

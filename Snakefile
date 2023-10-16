@@ -28,7 +28,7 @@ log_dir = "logs"
 ############################################################
 
 SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
-DEDUP_STRING = ""
+#DEDUP_STRING = ""
 if config["MISC"]["DEDUPLICATE"] == "True":
     DEDUP_STRING = config["EXTENSION"]["DEDUPLICATED"]
 else:
@@ -68,7 +68,7 @@ rule read_lengths:
 
 rule read_lengths_from_workdir:
     input:
-        reads = "{sample_name}.fastq"
+        "{sample_name}.fastq"
     output:
         "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
     params:
@@ -83,86 +83,202 @@ ruleorder: read_lengths > read_lengths_from_workdir
 ############################################################
 # Deduplication
 
-rule deduplicate_create_clusters:
+## CODE FROM TELSVIRUS
+rule bin_reads_by_length:
     input:
-        reads = samples_dir + "/{sample_name}.fastq",
-        reads_lengths = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+        samples_dir + "/{sample_name}.fastq"
     output:
-        clusters = [tmp_dir + "/tmp_{{sample_name}}/{{sample_name}}_{cl_id}.fasta.gz".format(cl_id=cl_id)
-                        for cl_id in range(config["MISC"]["DEDUP_CLUSTERS"])]
+        touch(tmp_dir + "{sample_name}.bin.reads.done")
     params:
-        num_of_clusters = config["MISC"]["DEDUP_CLUSTERS"],
-        clustering_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"],
-        tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}"
+        outdir = tmp_dir + "{sample_name}_read_bins",
+        bin_script = workflow.basedir + "/" + config["SCRIPTS"]["BIN_READS"]
     conda:
         "workflow/envs/deduplication.yaml"
     shell:
-        "mkdir -p {params.tmp_dir_clusters}; "
-        "python {params.clustering_script} "
-        "-r {input.reads} "
-        "-o {params.tmp_dir_clusters} "
-        "-n {params.num_of_clusters} "
-        "-l {input.reads_lengths}"
+        "mkdir -p {params.outdir}; "
+        "{params.bin_script} "
+        "--infile {input} "
+        "--outdir {params.outdir}"
 
-rule deduplicate_blat:
+rule cluster_reads:
     input:
-        tmp_dir + "/tmp_{sample_name}/{sample_name}_{cl_id}.fasta.gz"
+        tmp_dir + "{sample_name}.bin.reads.done"
     output:
-        tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
+        touch(tmp_dir + "{sample_name}.cluster.reads.done")
     params:
-        out_pls_dir = tmp_dir + "/tmp_{sample_name}/pls_files"
+        indir = tmp_dir + "{sample_name}_read_bins",
+        outdir = tmp_dir + "{sample_name}_read_clusters",
+        cluster_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"]
+    conda:
+        "workflow/envs/deduplication.yaml"
+    shell:
+        "mkdir -p {params.outdir}; "
+        "{params.cluster_script} "
+        "--indir {params.indir} "
+        "--outdir {params.outdir}; "
+        "rm -rf {params.indir}; "
+        "rm {input}"
+
+rule blat_clustered_reads:
+    input:
+        tmp_dir + "{sample_name}.cluster.reads.done"
+    output:
+        touch(tmp_dir + "{sample_name}.blat.done")
+    params:
+        rc = tmp_dir + "{sample_name}_read_clusters/",
+        o = tmp_dir + "{sample_name}_psl_files/",
+        blat_script = workflow.basedir + "/" + config["SCRIPTS"]["RUN_BLAT"]
     threads:
-        config["MISC"]["BLAT_THREADS"]
+        32
     conda:
         "workflow/envs/deduplication.yaml"
     shell:
-        "mkdir -p {params.out_pls_dir}; "
-        "blat {input} {input} {output}"
+        "mkdir -p {params.o}; "
+        "{params.blat_script} "
+        "--outdir {params.o} "
+        "--threads {threads} "
+        "--read_clusters {params.rc}; "
+        "rm -rf {params.rc}; "
+        "rm {input}"
 
-rule deduplicate_find_duplicates:
+rule find_duplicates:
     input:
-        tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
+        tmp_dir + "{sample_name}.blat.done"
     output:
-        tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}_duplicates.csv"
+        touch(tmp_dir + "{sample_name}.find.duplcates.done")
     params:
-        find_duplicates_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"],
-        similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"]
+        similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"],
+        pls_dir = tmp_dir + "{sample_name}_psl_files/",
+        outdir = tmp_dir + "{sample_name}_duplicate_txts/",
+        find_dups_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"]
     conda:
         "workflow/envs/deduplication.yaml"
     shell:
-        "python {params.find_duplicates_script} "
-        "-p {input} "
-        "-s {params.similarity_threshold} > {output}"
+        "mkdir -p {params.outdir}; "
+        "{params.find_dups_scripts} "
+        "{params.outdir} "
+        "{params.pls_dir} "
+        "{params.similarity_threshold}; "
+        "rm -rf {params.pls_dir}; "
+        "rm {input}"
 
-rule deduplicate_merge_duplicates_sets:
+rule merge_duplicates_lists:
     input:
-        expand(tmp_dir + "/tmp_{{sample_name}}/pls_files/{cl_id}_duplicates.csv", cl_id=range(config["MISC"]["DEDUP_CLUSTERS"]))
+        tmp_dir + "{sample_name}.find.duplcates.done"
     output:
-        tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
-    run:
-        import csv
-        with open(output[0], "w") as out_csv_handle:
-            csv_writer = csv.writer(out_csv_handle)
-            for cluster_duplicate_file in input:
-                with open(cluster_duplicate_file) as csv_handle:
-                    csv_reader = csv.reader(csv_handle)
-                    for row in csv_reader:
-                        csv_writer.writerow(row)
+        tmp_dir + "{sample_name}.duplicates.txt"
+    params:
+        indir = tmp_dir + "{sample_name}_duplicate_txts/"
+    shell:
+        "cat {params.indir}/* > {output}; "
+        "rm -rf {params.indir}"
 
+# change output so that it is NOT gzipped *********
 rule deduplicate:
     input:
         reads = samples_dir + "/{sample_name}.fastq",
-        duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
+        duplicates_list = tmp_dir + "{sample_name}.duplicates.txt"
     output:
-        "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
+        reads =  "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
+        #reads = "{sample_name}.dedup.fastq.gz",
+        dupes = "{sample_name}.dup.reads.fastq.gz"
     params:
-        deduplicate_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
+        dedup_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
     conda:
         "workflow/envs/deduplication.yaml"
     shell:
-        "python {params.deduplicate_script} "
-        "-r {input.reads} "
-        "-d {input.duplicates_csv} > {output}"
+        "{params.dedup_script} "
+        "--reads {input.reads} "
+        "--duplicates {input.duplicates_list} "
+        "--out_reads {output.reads} "
+        "--out_dupes {output.dupes}"
+
+
+
+
+
+
+
+# rule deduplicate_create_clusters:
+#     input:
+#         reads = samples_dir + "/{sample_name}.fastq",
+#         reads_lengths = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"]
+#     output:
+#         clusters = [tmp_dir + "/tmp_{{sample_name}}/{{sample_name}}_{cl_id}.fasta.gz".format(cl_id=cl_id)
+#                         for cl_id in range(config["MISC"]["DEDUP_CLUSTERS"])]
+#     params:
+#         num_of_clusters = config["MISC"]["DEDUP_CLUSTERS"],
+#         clustering_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"],
+#         tmp_dir_clusters = tmp_dir + "/tmp_{sample_name}"
+#     conda:
+#         "workflow/envs/deduplication.yaml"
+#     shell:
+#         "mkdir -p {params.tmp_dir_clusters}; "
+#         "python {params.clustering_script} "
+#         "-r {input.reads} "
+#         "-o {params.tmp_dir_clusters} "
+#         "-n {params.num_of_clusters} "
+#         "-l {input.reads_lengths}"
+
+# rule deduplicate_blat:
+#     input:
+#         tmp_dir + "/tmp_{sample_name}/{sample_name}_{cl_id}.fasta.gz"
+#     output:
+#         tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
+#     params:
+#         out_pls_dir = tmp_dir + "/tmp_{sample_name}/pls_files"
+#     threads:
+#         config["MISC"]["BLAT_THREADS"]
+#     conda:
+#         "workflow/envs/deduplication.yaml"
+#     shell:
+#         "mkdir -p {params.out_pls_dir}; "
+#         "blat {input} {input} {output}"
+
+# rule deduplicate_find_duplicates:
+#     input:
+#         tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}.pls"
+#     output:
+#         tmp_dir + "/tmp_{sample_name}/pls_files/{cl_id}_duplicates.csv"
+#     params:
+#         find_duplicates_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"],
+#         similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"]
+#     conda:
+#         "workflow/envs/deduplication.yaml"
+#     shell:
+#         "python {params.find_duplicates_script} "
+#         "-p {input} "
+#         "-s {params.similarity_threshold} > {output}"
+
+# rule deduplicate_merge_duplicates_sets:
+#     input:
+#         expand(tmp_dir + "/tmp_{{sample_name}}/pls_files/{cl_id}_duplicates.csv", cl_id=range(config["MISC"]["DEDUP_CLUSTERS"]))
+#     output:
+#         tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
+#     run:
+#         import csv
+#         with open(output[0], "w") as out_csv_handle:
+#             csv_writer = csv.writer(out_csv_handle)
+#             for cluster_duplicate_file in input:
+#                 with open(cluster_duplicate_file) as csv_handle:
+#                     csv_reader = csv.reader(csv_handle)
+#                     for row in csv_reader:
+#                         csv_writer.writerow(row)
+
+# rule deduplicate:
+#     input:
+#         reads = samples_dir + "/{sample_name}.fastq",
+#         duplicates_csv = tmp_dir + "/tmp_{sample_name}/merged_duplicates.csv"
+#     output:
+#         "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
+#     params:
+#         deduplicate_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
+#     conda:
+#         "workflow/envs/deduplication.yaml"
+#     shell:
+#         "python {params.deduplicate_script} "
+#         "-r {input.reads} "
+#         "-d {input.duplicates_csv} > {output}"
 
 rule not_deduplicated_reads:
     input:
@@ -178,7 +294,7 @@ rule not_deduplicated_reads:
 rule align_to_megares:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
-        megares_v2_seqs = ancient(databases_dir + "/" + "megares_modified_database_v2.00.fasta")
+        megares_seqs = ancient(databases_dir + "/" + "megares_modified_database_v2.00.fasta")
     output:
         "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"]
     params:
@@ -193,7 +309,7 @@ rule align_to_megares:
         "minimap2 "
         "-t {threads} "
         "{params.minimap_flags} "
-        "{input.megares_v2_seqs} "
+        "{input.megares_seqs} "
         "{input.reads} "
         "-o {output}"
 
@@ -219,27 +335,27 @@ rule align_to_mges:
         "{input.reads} "
         "-o {output}"
 
-rule align_to_kegg:
-    input:
-        reads = "{sample_name}.fastq" + DEDUP_STRING,
-        kegg_database = ancient(databases_dir + "/" + "kegg_genes.fasta")
-    output:
-        "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"]
-    params:
-        minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
-                        + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
-                        + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
-    conda:
-        "workflow/envs/alignment.yaml"
-    threads:
-        config["MINIMAP2"]["THREADS"]
-    shell:
-        "minimap2 "
-        "-t {threads} "
-        "{params.minimap_flags} "
-        "{input.kegg_database} "
-        "{input.reads} "
-        "-o {output}"
+# rule align_to_kegg:
+#     input:
+#         reads = "{sample_name}.fastq" + DEDUP_STRING,
+#         kegg_database = ancient(databases_dir + "/" + "kegg_genes.fasta")
+#     output:
+#         "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"]
+#     params:
+#         minimap_flags = config["MINIMAP2"]["ALIGNER_PB_OPTION"] + " "
+#                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
+#                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
+#     conda:
+#         "workflow/envs/alignment.yaml"
+#     threads:
+#         config["MINIMAP2"]["THREADS"]
+#     shell:
+#         "minimap2 "
+#         "-t {threads} "
+#         "{params.minimap_flags} "
+#         "{input.kegg_database} "
+#         "{input.reads} "
+#         "-o {output}"
 
 rule pass_config_file:
     output:
@@ -251,7 +367,7 @@ rule pass_config_file:
             config_to_pass["DATABASE"] = dict()
             config_to_pass["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_modified_database_v2.00.fasta"
             config_to_pass["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_modified_annotations_v2.00.csv"
-            config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
+            # config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
             config_to_pass["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_parser = configparser.ConfigParser()
             config_parser.read_dict(config_to_pass)
@@ -283,6 +399,7 @@ rule resistome_and_mobilome:
         "-c {input.config_file} "
         "-o {params.output_prefix}"
 
+# Going to have to change this script to remove KEGG
 rule find_colocalizations:
     input:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
@@ -380,7 +497,7 @@ rule heatmap_notebook:
     notebook:
         "workflow/notebooks/heatmap_notebook.py.ipynb"
 
-
+# Going to have to change code here as well
 rule colocalization_visualizations_notebook:
     input:
         megares_db = databases_dir + "/megares_modified_database_v2.00.fasta",
@@ -401,10 +518,10 @@ rule colocalization_visualizations_notebook:
 ## Databases
 ############################################################
 
-rule get_megares_v2:
+rule get_megares:
     output:
-        megares_v2_seqs = os.path.join(databases_dir,"megares_modified_database_v2.00.fasta"),
-        megares_v2_ontology = os.path.join(databases_dir,"megares_modified_annotations_v2.00.csv")
+        megares_seqs = os.path.join(databases_dir,"megares_modified_database_v2.00.fasta"),
+        megares_ontology = os.path.join(databases_dir,"megares_modified_annotations_v2.00.csv")
     params:
         megares_seqs = "https://www.meglab.org/downloads/megares_v3.00/megares_database_v3.00.fasta",
         megares_ann = "https://www.meglab.org/downloads/megares_v3.00/megares_annotations_v3.00.csv"
@@ -412,8 +529,8 @@ rule get_megares_v2:
         "workflow/envs/download_databases.yaml"
     shell:
         "mkdir -p {databases_dir}; "
-        "wget {params.megares_seqs} -O {output.megares_v2_seqs}; "
-        "wget {params.megares_ann} -O {output.megares_v2_ontology}"
+        "wget {params.megares_seqs} -O {output.megares_seqs}; "
+        "wget {params.megares_ann} -O {output.megares_ontology}"
 
 # There has to be a better way to get the plasmid finder db...
 
@@ -457,21 +574,21 @@ rule get_iceberg_db:
         "mkdir -p {databases_dir}; "
         "gdown {params.iceberg} --fuzzy -O {output}"
 
-# rule get_MGEs_DBs:
-#     input:
-#         plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta",
-#         aclame_db = databases_dir + "/aclame_db.fasta",
-#         iceberg_db = databases_dir + "/iceberg_db.fasta"
-#     output:
-#         databases_dir + "/mges_combined.fasta"
-#     conda:
-#         "workflow/envs/download_databases.yaml"
-#     shell:
-#         "mkdir -p {databases_dir}; "
-#         "echo '' >> {output}; "
-#         "cat {input.plasmid_finder_db} >> {output}; "
-#         "cat {input.aclame_db} >> {output}; "
-#         "cat {input.iceberg_db} >> {output}"
+rule get_MGEs_DBs:
+    input:
+        plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta",
+        aclame_db = databases_dir + "/aclame_db.fasta",
+        iceberg_db = databases_dir + "/iceberg_db.fasta"
+    output:
+        databases_dir + "/mges_combined.fasta"
+    conda:
+        "workflow/envs/download_databases.yaml"
+    shell:
+        "mkdir -p {databases_dir}; "
+        "echo '' >> {output}; "
+        "cat {input.plasmid_finder_db} >> {output}; "
+        "cat {input.aclame_db} >> {output}; "
+        "cat {input.iceberg_db} >> {output}"
 
 rule get_MGEs_DBs:
     input:
@@ -485,13 +602,13 @@ rule get_MGEs_DBs:
     shell:
         "cat {input} > {output}"
 
-rule get_KEGG_DBs:
-    output:
-        touch(databases_dir + "/kegg_genes.fasta")
-    conda:
-        "workflow/envs/download_databases.yaml"
-    shell:
-        "mkdir -p {databases_dir}"
+# rule get_KEGG_DBs:
+#     output:
+#         touch(databases_dir + "/kegg_genes.fasta")
+#     conda:
+#         "workflow/envs/download_databases.yaml"
+#     shell:
+#         "mkdir -p {databases_dir}"
 
 ############################################################
 ## Cleans

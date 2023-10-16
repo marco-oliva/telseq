@@ -367,8 +367,8 @@ rule pass_config_file:
             config_to_pass["DATABASE"] = dict()
             config_to_pass["DATABASE"]["MEGARES"] = databases_dir + "/" + "megares_modified_database_v2.00.fasta"
             config_to_pass["DATABASE"]["MEGARES_ONTOLOGY"] = databases_dir + "/" + "megares_modified_annotations_v2.00.csv"
-            # config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
-            config_to_pass["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
+            config_to_pass["DATABASE"]["MGES"] = databases_dir + "/" + "mges_combined.fasta"
+            # config_to_pass["DATABASE"]["KEGG"] = databases_dir + "/" + "kegg_genes.fasta"
             config_parser = configparser.ConfigParser()
             config_parser.read_dict(config_to_pass)
             config_parser.write(configfile_out)
@@ -405,7 +405,7 @@ rule find_colocalizations:
         reads = "{sample_name}.fastq" + DEDUP_STRING,
         megares_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
         mges_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"],
-        kegg_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"],
+        #kegg_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"],
         reads_lenght = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         config_file = "config.ini"
@@ -421,7 +421,7 @@ rule find_colocalizations:
         "-r {input.reads} "
         "--arg {input.megares_sam} "
         "--mge {input.mges_sam} "
-        "-k {input.kegg_sam} "
+        #"-k {input.kegg_sam} "
         "-c {input.config_file} "
         "-o {params.output_directory} "
         "> {output}"
@@ -503,7 +503,7 @@ rule colocalization_visualizations_notebook:
         megares_db = databases_dir + "/megares_modified_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_modified_annotations_v2.00.csv",
         mges_db = databases_dir + "/mges_combined.fasta",
-        kegg_db = databases_dir + "/kegg_genes.fasta",
+        # kegg_db = databases_dir + "/kegg_genes.fasta",
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         colocalizations = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
         config_file = "config.ini"

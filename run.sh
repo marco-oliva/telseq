@@ -1,4 +1,4 @@
-#!/bin/bash\
+#!/bin/bash
 #SBATCH --job-name=TLS-disp
 #SBATCH --account=<account>
 #SBATCH --qos=<account qos>

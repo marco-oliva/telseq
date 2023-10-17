@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import gzip
+#import gzip
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -15,20 +15,21 @@ def get_duplicates(dupes_file):
     return [line.strip() for line in open(dupes_file)]
 
 def get_reads(reads):
-    return (line for line in gzip.open(reads, 'rb'))
+    return (line for line in open(reads, 'r'))
 
 def make_out_file(fq):
-    open(fq, 'wb').close()
+    open(fq, 'w').close()
 
 def write_out(outfile, read_id, seq, desc, qual):
-    with gzip.open(outfile , "a") as o:
+    with open(outfile , "a") as o:
         o.write(read_id)
         o.write(seq)
         o.write(desc)
         o.write(qual)
 
 def dup_check(read, reads, duplicates, out_reads, out_dupes):
-    read_id = read.split(b' ')[0][1:].decode('utf-8')
+    # read_id = read.split(b' ')[0][1:].decode('utf-8')
+    read_id = read.split(' ')[0][1:]
     if read_id in duplicates:
         write_out(out_dupes, read, next(reads), next(reads), next(reads))
     else:

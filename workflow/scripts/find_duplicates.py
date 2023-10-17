@@ -10,10 +10,12 @@ def parse_args():
     return parser.parse_args()
 
 def read_psl(psl):
+    # return [q.strip().split('\t') for q in open(psl)]
     return (q.strip().split('\t') for q in open(psl))
 
 def skip_header(qresults):
-    [next(qresults) for _ in range(5)]
+    try: [next(qresults) for _ in range(5)]
+    except StopIteration: pass
 
 def high_match(q, threshold): 
     return (int(q[0]) >= threshold * int(q[14]) # amount covered is 90% of target?
@@ -46,6 +48,7 @@ def write_out(outfile, dup_set):
 def main():
     args = parse_args()
     qresults = read_psl(args.p)
+    #print(qresults)
     skip_header(qresults)
     dupes = find_dupes(qresults, args.s)
     cleaned_dupes = remove_doubles(dupes)

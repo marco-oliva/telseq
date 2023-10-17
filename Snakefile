@@ -88,9 +88,9 @@ rule bin_reads_by_length:
     input:
         samples_dir + "/{sample_name}.fastq"
     output:
-        touch(tmp_dir + "{sample_name}.bin.reads.done")
+        touch(tmp_dir + "/{sample_name}.bin.reads.done")
     params:
-        outdir = tmp_dir + "{sample_name}_read_bins",
+        outdir = tmp_dir + "/{sample_name}_read_bins",
         bin_script = workflow.basedir + "/" + config["SCRIPTS"]["BIN_READS"]
     conda:
         "workflow/envs/deduplication.yaml"
@@ -102,12 +102,12 @@ rule bin_reads_by_length:
 
 rule cluster_reads:
     input:
-        tmp_dir + "{sample_name}.bin.reads.done"
+        tmp_dir + "/{sample_name}.bin.reads.done"
     output:
-        touch(tmp_dir + "{sample_name}.cluster.reads.done")
+        touch(tmp_dir + "/{sample_name}.cluster.reads.done")
     params:
-        indir = tmp_dir + "{sample_name}_read_bins",
-        outdir = tmp_dir + "{sample_name}_read_clusters",
+        indir = tmp_dir + "/{sample_name}_read_bins",
+        outdir = tmp_dir + "/{sample_name}_read_clusters",
         cluster_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"]
     conda:
         "workflow/envs/deduplication.yaml"
@@ -121,12 +121,12 @@ rule cluster_reads:
 
 rule blat_clustered_reads:
     input:
-        tmp_dir + "{sample_name}.cluster.reads.done"
+        tmp_dir + "/{sample_name}.cluster.reads.done"
     output:
-        touch(tmp_dir + "{sample_name}.blat.done")
+        touch(tmp_dir + "/{sample_name}.blat.done")
     params:
-        rc = tmp_dir + "{sample_name}_read_clusters/",
-        o = tmp_dir + "{sample_name}_psl_files/",
+        rc = tmp_dir + "/{sample_name}_read_clusters/",
+        o = tmp_dir + "/{sample_name}_psl_files/",
         blat_script = workflow.basedir + "/" + config["SCRIPTS"]["RUN_BLAT"]
     threads:
         32
@@ -143,19 +143,19 @@ rule blat_clustered_reads:
 
 rule find_duplicates:
     input:
-        tmp_dir + "{sample_name}.blat.done"
+        tmp_dir + "/{sample_name}.blat.done"
     output:
-        touch(tmp_dir + "{sample_name}.find.duplcates.done")
+        touch(tmp_dir + "/{sample_name}.find.duplcates.done")
     params:
         similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"],
-        pls_dir = tmp_dir + "{sample_name}_psl_files/",
-        outdir = tmp_dir + "{sample_name}_duplicate_txts/",
+        pls_dir = tmp_dir + "/{sample_name}_psl_files/",
+        outdir = tmp_dir + "/{sample_name}_duplicate_txts/",
         find_dups_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"]
     conda:
         "workflow/envs/deduplication.yaml"
     shell:
         "mkdir -p {params.outdir}; "
-        "{params.find_dups_scripts} "
+        "{params.find_dups_script} "
         "{params.outdir} "
         "{params.pls_dir} "
         "{params.similarity_threshold}; "
@@ -164,11 +164,11 @@ rule find_duplicates:
 
 rule merge_duplicates_lists:
     input:
-        tmp_dir + "{sample_name}.find.duplcates.done"
+        tmp_dir + "/{sample_name}.find.duplcates.done"
     output:
-        tmp_dir + "{sample_name}.duplicates.txt"
+        tmp_dir + "/{sample_name}.duplicates.txt"
     params:
-        indir = tmp_dir + "{sample_name}_duplicate_txts/"
+        indir = tmp_dir + "/{sample_name}_duplicate_txts/"
     shell:
         "cat {params.indir}/* > {output}; "
         "rm -rf {params.indir}"
@@ -177,11 +177,11 @@ rule merge_duplicates_lists:
 rule deduplicate:
     input:
         reads = samples_dir + "/{sample_name}.fastq",
-        duplicates_list = tmp_dir + "{sample_name}.duplicates.txt"
+        duplicates_list = tmp_dir + "/{sample_name}.duplicates.txt"
     output:
-        reads =  "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"]
+        reads =  "{sample_name}.fastq" + config["EXTENSION"]["DEDUPLICATED"],
         #reads = "{sample_name}.dedup.fastq.gz",
-        dupes = "{sample_name}.dup.reads.fastq.gz"
+        dupes = "{sample_name}.dup.reads.fastq"
     params:
         dedup_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
     conda:
@@ -409,7 +409,7 @@ rule find_colocalizations:
         reads_lenght = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
         config_file = "config.ini"
-     output:
+    output:
         "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"]
     params:
         find_colocalizations_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_COLOCALIZATIONS"],
@@ -574,21 +574,21 @@ rule get_iceberg_db:
         "mkdir -p {databases_dir}; "
         "gdown {params.iceberg} --fuzzy -O {output}"
 
-rule get_MGEs_DBs:
-    input:
-        plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta",
-        aclame_db = databases_dir + "/aclame_db.fasta",
-        iceberg_db = databases_dir + "/iceberg_db.fasta"
-    output:
-        databases_dir + "/mges_combined.fasta"
-    conda:
-        "workflow/envs/download_databases.yaml"
-    shell:
-        "mkdir -p {databases_dir}; "
-        "echo '' >> {output}; "
-        "cat {input.plasmid_finder_db} >> {output}; "
-        "cat {input.aclame_db} >> {output}; "
-        "cat {input.iceberg_db} >> {output}"
+# rule get_MGEs_DBs:
+#     input:
+#         plasmid_finder_db = databases_dir + "/plasmid_finder_db.fasta",
+#         aclame_db = databases_dir + "/aclame_db.fasta",
+#         iceberg_db = databases_dir + "/iceberg_db.fasta"
+#     output:
+#         databases_dir + "/mges_combined.fasta"
+#     conda:
+#         "workflow/envs/download_databases.yaml"
+#     shell:
+#         "mkdir -p {databases_dir}; "
+#         "echo '' >> {output}; "
+#         "cat {input.plasmid_finder_db} >> {output}; "
+#         "cat {input.aclame_db} >> {output}; "
+#         "cat {input.iceberg_db} >> {output}"
 
 rule get_MGEs_DBs:
     input:

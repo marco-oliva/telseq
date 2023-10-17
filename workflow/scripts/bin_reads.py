@@ -11,19 +11,19 @@ def parse_args():
 
 def gen_read_length_clusters(reads, outdir):
     for read in reads:
-        read_id = read.split(b' ')[0][1:]
+        read_id = read.split(' ')[0][1:]
         seq = next(reads)
         seq_len = len(seq.strip())
         next(reads) # desc
         next(reads) # qual
         outfile = f'{outdir}/{seq_len}.rl.bins.fasta.gz'
-        with gzip.open(outfile, "a") as o:
-            o.write(b'>' + read_id + b'\n')
+        with open(outfile, "a") as o:
+            o.write('>' + read_id + '\n')
             o.write(seq)
 
 def main():
     args = parse_args()
-    reads = (line for line in gzip.open(args.infile, 'rb'))
+    reads = (line for line in open(args.infile, 'r'))
     gen_read_length_clusters(reads, args.outdir)
 
 if __name__ == "__main__":

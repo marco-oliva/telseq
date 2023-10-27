@@ -306,7 +306,7 @@ rule align_to_megares:
     threads:
         config["MINIMAP2"]["THREADS"]
     shell:
-        "minimap2 "
+        "minimap2 -Y "
         "-t {threads} "
         "{params.minimap_flags} "
         "{input.megares_seqs} "
@@ -328,7 +328,7 @@ rule align_to_mges:
     threads:
         config["MINIMAP2"]["THREADS"]
     shell:
-        "minimap2 "
+        "minimap2 -Y "
         "-t {threads} "
         "{params.minimap_flags} "
         "{input.mges_database} "

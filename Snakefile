@@ -38,6 +38,7 @@ EXTS = [
     DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
     DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
     DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS_RICHNESS"],
+    DEDUP_STRING + config['EXTENSION']['OVERLAP'],
     DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"] + config["EXTENSION"]["RESISTOME_RICHNESS"],
     DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"] + config["EXTENSION"]["RESISTOME_DIVERSITY"],
     DEDUP_STRING + "_" + config["MISC"]["MOBILOME_STRATEGY"] + config["EXTENSION"]["MOBILOME"]]
@@ -373,12 +374,54 @@ rule pass_config_file:
             config_parser.read_dict(config_to_pass)
             config_parser.write(configfile_out)
 
+rule overlap:
+    input:
+        megares_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
+        mges_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"],
+        reads_length = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
+        dedup_reads_length = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
+        config_file = "config.ini"
+    params:
+        overlap_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_OVERLAP"],
+        output_prefix = "{sample_name}.fastq" + DEDUP_STRING
+    conda:
+        "workflow/envs/pipeline.yaml"
+    output:
+        overlap = "{sample_name}.fastq" + DEDUP_STRING + config['EXTENSION']['OVERLAP']
+
+    shell:
+        "python {params.overlap_script} "
+        "-r {wildcards.sample_name}.fastq "
+        "-a {input.megares_sam} "
+        "-m {input.mges_sam} "
+        "-c {input.config_file} "
+        "-o {params.output_prefix}"
+
+rule merge_overlap_info:
+    input:
+        expand("{sample_name}.fastq" + DEDUP_STRING + config['EXTENSION']['OVERLAP'], sample_name = SAMPLES)
+    output: 
+        merged_info = 'merged_overlaped_mges_info.csv'
+    run:
+        import csv
+        merged_overlaped_mges_info = set()
+        for overlap_info_filename in input:
+            with open(overlap_info_filename) as overlap_info_file:
+                overlap_reader = csv.reader(overlap_info_file, delimiter=',')
+                for row in overlap_reader:
+                    merged_overlaped_mges_info.add(row[0])
+        with open(output[0], 'w') as merged:
+            merged_writer = csv.writer(merged, delimiter=',')
+            for mge in merged_overlaped_mges_info:
+                merged_writer.writerow([mge])
+
 rule resistome_and_mobilome:
     input:
         megares_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
         mges_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"],
         reads_lenght = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
+        overlap = "{sample_name}.fastq" + DEDUP_STRING + config['EXTENSION']['OVERLAP'],
         config_file = "config.ini"
     output:
         resistome_richness = "{sample_name}.fastq" + DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"]
@@ -396,6 +439,7 @@ rule resistome_and_mobilome:
         "-r {wildcards.sample_name}.fastq "
         "-a {input.megares_sam} "
         "-m {input.mges_sam} "
+        "-s {input.overlap} "
         "-c {input.config_file} "
         "-o {params.output_prefix}"
 
@@ -408,6 +452,7 @@ rule find_colocalizations:
         #kegg_sam = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["A_TO_KEGG"],
         reads_lenght = "{sample_name}.fastq" + config["EXTENSION"]["READS_LENGTH"],
         dedup_reads_lenght = "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
+        overlap = "{sample_name}.fastq" + DEDUP_STRING + config['EXTENSION']['OVERLAP'],
         config_file = "config.ini"
     output:
         "{sample_name}.fastq" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"]
@@ -421,6 +466,7 @@ rule find_colocalizations:
         "-r {input.reads} "
         "--arg {input.megares_sam} "
         "--mge {input.mges_sam} "
+        "-s {input.overlap} "
         #"-k {input.kegg_sam} "
         "-c {input.config_file} "
         "-o {params.output_directory} "

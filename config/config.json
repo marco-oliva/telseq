@@ -75,7 +75,8 @@
     "READS_LENGTH" : "workflow/scripts/read_lengths.py",
     "DOWNLOAD_KEGG" : "workflow/scripts/download_kegg.py",
     "BIN_READS" : "workflow/scripts/bin_reads.py",
-    "RUN_BLAT" : "workflow/scripts/run_blat.py"
+    "RUN_BLAT" : "workflow/scripts/run_blat.py",
+    "FIND_OVERLAP" : "workflow/scripts/find_overlap.py"
   },
 
   "STATS" :

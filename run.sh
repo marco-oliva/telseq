@@ -22,6 +22,7 @@ pwd; hostname; date
 
 ##----------------------------------------------------------
 # Modules
+module load conda
 module load snakemake
 
 

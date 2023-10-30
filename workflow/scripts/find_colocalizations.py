@@ -18,7 +18,8 @@ def not_overlapping(intervals_list):
     return True
 
 
-def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, to_kegg_path):
+# def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, to_kegg_path):
+def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path):
     logger = logging.getLogger()
 
     # Get read lengths
@@ -54,10 +55,10 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
         mge_gene_lengths[rec.name] = len(rec.seq)
 
     # Get KEGG lengths for coverage
-    kegg_gene_lengths = dict()
-    kegg_reference_fasta_filename = config['DATABASE']['KEGG']
-    for rec in SeqIO.parse(kegg_reference_fasta_filename, "fasta"):
-        kegg_gene_lengths[rec.name] = len(rec.seq)
+    # kegg_gene_lengths = dict()
+    # kegg_reference_fasta_filename = config['DATABASE']['KEGG']
+    # for rec in SeqIO.parse(kegg_reference_fasta_filename, "fasta"):
+    #     kegg_gene_lengths[rec.name] = len(rec.seq)
 
     # Open aligned to megares sam
     logger.info("Reading ARGS alignment file")
@@ -89,30 +90,30 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
                 else:
                     amr_to_generated_bases[read.reference_name] += read.reference_length
 
-    # Open aligned to Kegg
-    logger.info("Reading KEGG alignment files")
-    kegg_positions = dict()
-    read_to_kegg = dict()
-    try:
-        with pysam.AlignmentFile(to_kegg_path, "r") as to_kegg_samfile:
-            for read in to_kegg_samfile:
-                if read.is_unmapped:
-                    continue
+    # # Open aligned to Kegg
+    # logger.info("Reading KEGG alignment files")
+    # kegg_positions = dict()
+    # read_to_kegg = dict()
+    # try:
+    #     with pysam.AlignmentFile(to_kegg_path, "r") as to_kegg_samfile:
+    #         for read in to_kegg_samfile:
+    #             if read.is_unmapped:
+    #                 continue
 
-                # if config['MISC']['USE_SECONDARY_ALIGNMENTS'] not in ['True', 'true'] and read.is_secondary:
-                if read.is_secondary:
-                    continue
+    #             # if config['MISC']['USE_SECONDARY_ALIGNMENTS'] not in ['True', 'true'] and read.is_secondary:
+    #             if read.is_secondary:
+    #                 continue
 
-                # Check coverage
-                if (read.reference_length / (kegg_gene_lengths[read.reference_name])) > float(config['MISC']['GLOBAL_KEGG_THRESHOLD_COLOCALIZATIONS']):
-                    if read.query_name not in read_to_kegg:
-                        read_to_kegg[read.query_name] = list()
-                        kegg_positions[read.query_name] = list()
-                    kegg_positions[read.query_name].append([read.query_alignment_start, read.query_alignment_end])
-                    read_to_kegg[read.query_name].append(read.reference_name)
-    except ValueError:
-        pass
-        # print("--- Skipped KEGG ---")
+    #             # Check coverage
+    #             if (read.reference_length / (kegg_gene_lengths[read.reference_name])) > float(config['MISC']['GLOBAL_KEGG_THRESHOLD_COLOCALIZATIONS']):
+    #                 if read.query_name not in read_to_kegg:
+    #                     read_to_kegg[read.query_name] = list()
+    #                     kegg_positions[read.query_name] = list()
+    #                 kegg_positions[read.query_name].append([read.query_alignment_start, read.query_alignment_end])
+    #                 read_to_kegg[read.query_name].append(read.reference_name)
+    # except ValueError:
+    #     pass
+    #     # print("--- Skipped KEGG ---")
 
     # Open aligned to MGEs
     logger.info("Reading MGEs alignment files")
@@ -146,10 +147,14 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
     logger.info("Writing per read genes list to {}".format(genes_list_csv))
     with open(genes_list_csv, 'w') as genes_list_handle:
         writer = csv.writer(genes_list_handle)
+        # header = ['Read Name',
+        #           'AMR Genes', 'AMR Genes Pos',
+        #           'MGE Genes', 'MGE Genes Pos',
+        #           'KEGG genes', 'KEGG Genes Pos'
+        #           ]
         header = ['Read Name',
                   'AMR Genes', 'AMR Genes Pos',
-                  'MGE Genes', 'MGE Genes Pos',
-                  'KEGG genes', 'KEGG Genes Pos'
+                  'MGE Genes', 'MGE Genes Pos'
                   ]
         writer.writerow(header)
 
@@ -159,11 +164,11 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
             for idx, amr_name in enumerate(amr_list):
                 amr_genes_list.append([amr_name, amr_positions[read][idx], 'amr'])
 
-            # Kegg genes list
-            kegg_genes_list = list()
-            if read in read_to_kegg:
-                for idx, kegg_name in enumerate(read_to_kegg[read]):
-                    kegg_genes_list.append([kegg_name, kegg_positions[read][idx], 'kegg'])
+            # # Kegg genes list
+            # kegg_genes_list = list()
+            # if read in read_to_kegg:
+            #     for idx, kegg_name in enumerate(read_to_kegg[read]):
+            #         kegg_genes_list.append([kegg_name, kegg_positions[read][idx], 'kegg'])
 
             # MGE genes list
             mge_genes_list = list()
@@ -174,7 +179,7 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
             genes_lists[read] = list()
             genes_lists[read].extend(amr_genes_list)
             genes_lists[read].extend(mge_genes_list)
-            genes_lists[read].extend(kegg_genes_list)
+            # genes_lists[read].extend(kegg_genes_list)
 
             amr_genes_concatenated_names = list()
             amr_genes_concatenated_pos = list()
@@ -188,16 +193,19 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
                 mge_genes_concatenated_names.append(name)
                 mge_genes_concatenated_pos.append('({},{})'.format(pos[0], pos[1]))
 
-            kegg_genes_concatenated_names = list()
-            kegg_genes_concatenated_pos = list()
-            for name, pos, _ in kegg_genes_list:
-                kegg_genes_concatenated_names.append(name)
-                kegg_genes_concatenated_pos.append('({},{})'.format(pos[0], pos[1]))
+            # kegg_genes_concatenated_names = list()
+            # kegg_genes_concatenated_pos = list()
+            # for name, pos, _ in kegg_genes_list:
+            #     kegg_genes_concatenated_names.append(name)
+            #     kegg_genes_concatenated_pos.append('({},{})'.format(pos[0], pos[1]))
 
+            # row = [read,
+            #        ';'.join(amr_genes_concatenated_names), ';'.join(amr_genes_concatenated_pos),
+            #        ';'.join(mge_genes_concatenated_names), ';'.join(mge_genes_concatenated_pos),
+            #        ';'.join(kegg_genes_concatenated_names), ';'.join(kegg_genes_concatenated_pos)]
             row = [read,
                    ';'.join(amr_genes_concatenated_names), ';'.join(amr_genes_concatenated_pos),
-                   ';'.join(mge_genes_concatenated_names), ';'.join(mge_genes_concatenated_pos),
-                   ';'.join(kegg_genes_concatenated_names), ';'.join(kegg_genes_concatenated_pos)]
+                   ';'.join(mge_genes_concatenated_names), ';'.join(mge_genes_concatenated_pos)]
             writer.writerow(row)
 
     # Candidate colocalizations
@@ -217,8 +225,8 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
 
         # First take all the non-overlapping ARGS
         for idx, aligned_gene in enumerate(sorted_candidate_coloc_list):
-            if aligned_gene[2] == 'kegg':
-                continue
+            # if aligned_gene[2] == 'kegg':
+            #     continue
             if len(colocalization) == 0 or aligned_gene[1][0] > colocalization[-1][1][1]:
                 colocalization.append(aligned_gene)
                 if aligned_gene[2] == 'amr':
@@ -234,12 +242,12 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
                     has_MGE = True
 
         # Finally fit all non overlapping genes from Kegg
-        for idx, aligned_gene in enumerate(sorted_candidate_coloc_list):
-            if aligned_gene[2] == 'kegg':
-                ti_coloc = [c[1] for c in colocalization]
-                ti_coloc.append(aligned_gene[1])
-                if not_overlapping(ti_coloc):
-                    colocalization.append(aligned_gene)
+        # for idx, aligned_gene in enumerate(sorted_candidate_coloc_list):
+        #     if aligned_gene[2] == 'kegg':
+        #         ti_coloc = [c[1] for c in colocalization]
+        #         ti_coloc.append(aligned_gene[1])
+        #         if not_overlapping(ti_coloc):
+        #             colocalization.append(aligned_gene)
 
         if has_ARG and has_MGE:
             colocalizations[read] = colocalization
@@ -263,7 +271,7 @@ def get_colocalizations(config, reads_file_path, to_megares_path, to_mges_path, 
 
 def main():
     parser = argparse.ArgumentParser(description='Colocalizations Finder.')
-    parser.add_argument('-k', help='Kegg alignment file', dest='kegg_sam', required=True)
+    # parser.add_argument('-k', help='Kegg alignment file', dest='kegg_sam', required=True)
     parser.add_argument('--arg', help='Megares alignment file', dest='megares_sam', required=True)
     parser.add_argument('--mge', help='MGEs alignment file', dest='mges_sam', required=True)
     parser.add_argument('-r', help='Reads file', dest='reads_file', required=True)
@@ -294,11 +302,15 @@ def main():
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
 
+    # amr_set, mge_set, sample_colocalizations = get_colocalizations(config,
+    #                                                                args.reads_file,
+    #                                                                args.megares_sam,
+    #                                                                args.mges_sam,
+    #                                                                args.kegg_sam)
     amr_set, mge_set, sample_colocalizations = get_colocalizations(config,
                                                                    args.reads_file,
                                                                    args.megares_sam,
-                                                                   args.mges_sam,
-                                                                   args.kegg_sam)
+                                                                   args.mges_sam)
 
     logger = logging.getLogger()
     logger.info("Found {} reads with colocalizations".format(len(sample_colocalizations)))
@@ -306,7 +318,8 @@ def main():
     # Output colocalizations to stdout
     csvfile = sys.stdout
     writer = csv.writer(csvfile)
-    header = ['read', 'ARG', 'ARG positions', 'MGE(s)', 'MGE(s) positions', 'KEGG(s)', 'KEGG(s) positions']
+    # header = ['read', 'ARG', 'ARG positions', 'MGE(s)', 'MGE(s) positions', 'KEGG(s)', 'KEGG(s) positions']
+    header = ['read', 'ARG', 'ARG positions', 'MGE(s)', 'MGE(s) positions']
     writer.writerow(header)
     for read, colocalization in sample_colocalizations.items():
         row = list()
@@ -334,17 +347,18 @@ def main():
                 mges_positions += "{}:{}".format(gene[1][0], gene[1][1])
 
         # Kegg
-        keggs = ""
-        keggs_positions = ""
-        for gene in colocalization:
-            if gene[2] == 'kegg':
-                if keggs != "":
-                    keggs += ';'
-                    keggs_positions += ';'
-                keggs += gene[0]
-                keggs_positions += "{}:{}".format(gene[1][0], gene[1][1])
+        # keggs = ""
+        # keggs_positions = ""
+        # for gene in colocalization:
+        #     if gene[2] == 'kegg':
+        #         if keggs != "":
+        #             keggs += ';'
+        #             keggs_positions += ';'
+        #         keggs += gene[0]
+        #         keggs_positions += "{}:{}".format(gene[1][0], gene[1][1])
 
-        row.extend([arg, arg_position, mges, mges_positions, keggs, keggs_positions])
+        # row.extend([arg, arg_position, mges, mges_positions, keggs, keggs_positions])
+        row.extend([arg, arg_position, mges, mges_positions])
         writer.writerow(row)
 
 

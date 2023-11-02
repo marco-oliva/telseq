@@ -14,9 +14,15 @@
         "err": "logs/err_%j.log"
     },
 
-    "deduplicate_blat":
+    "meta_spades_assembly":
     {
-        "cpus-per-task": "8",
+        "cpus-per-task": "32",
+        "mem": "128gb"
+    },
+
+    "blat_clustered_reads":
+    {
+        "cpus-per-task": "32",
         "mem": "64gb"
     },
 
@@ -27,12 +33,6 @@
     },
 
     "align_to_mges":
-    {
-        "cpus-per-task": "32",
-        "mem": "64gb"
-    },
-
-    "align_to_kegg":
     {
         "cpus-per-task": "32",
         "mem": "64gb"

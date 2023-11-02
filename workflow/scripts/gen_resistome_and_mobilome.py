@@ -26,7 +26,7 @@ def long_reads_strategy_resistome(config):
 
     # Get reads lengths
     reads_lengths = dict()
-    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
+    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_NO_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
         reads_lengths = json.load(reads_lengths_json_fp)
 
     gene_dict = {}
@@ -183,7 +183,7 @@ def short_reads_strategy_resistome(config):
     megares_ontology, _ = read_megares_v2_ontology(config)
 
     reads_lengths = dict()
-    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
+    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_NO_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
         reads_lengths = json.load(reads_lengths_json_fp)
 
     gene_dict = {}
@@ -355,7 +355,7 @@ def long_reads_strategy_mobilome(config, AMR_mapped_regions_per_read):
 
     # Get reads lengths
     reads_lengths = dict()
-    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
+    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_NO_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
         reads_lengths = json.load(reads_lengths_json_fp)
 
     # Get list of overlapped MGEs
@@ -458,7 +458,7 @@ def short_reads_strategy_mobilome(config, AMR_mapped_regions_per_read):
 
     # Get reads lengths
     reads_lengths = dict()
-    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
+    with open(config['OUTPUT']['OUT_DIR'] + '/' + config['INPUT']['INPUT_FILE_NAME_NO_EXT'] + config['EXTENSION']['READS_LENGTH'], 'rt') as reads_lengths_json_fp:
         reads_lengths = json.load(reads_lengths_json_fp)
 
     # Get list of overlapped MGEs

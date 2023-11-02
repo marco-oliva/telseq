@@ -1,8 +1,10 @@
 {
   "WORKFLOW" :
   {
-    "WORKDIR": "test_dir",
-    "DATABASES_DIR": "databases"
+    "WORKDIR" : "test_dir",
+    "DATABASES_DIR" : "databases",
+    "LONG_READS" : "true",
+    "DEDUPLICATE" : "true"
   },
 
   "EXTENSION" :
@@ -10,6 +12,7 @@
     "DUPLICATES" : "_duplicates.csv",
     "DEDUPLICATED" : "_deduplicated.fastq",
     "NOT_DEDUPLICATED" : "_NOT_deduplicated.fastq",
+    "ASSEMBLY" : "_assembled",
     "A_TO_MEGARES" : "_ato_megaresv2.sam",
     "A_TO_MGES" : "_ato_MGES.sam",
     "A_TO_KEGG" : "_ato_KEGG.sam",
@@ -36,7 +39,6 @@
     "GLOBAL_AMR_THRESHOLD_COLOCALIZATIONS" : 0.8,
     "GLOBAL_MGE_THRESHOLD_COLOCALIZATIONS" : 0.5,
     "GLOBAL_KEGG_THRESHOLD_COLOCALIZATIONS" : 0.5,
-    "DEDUPLICATE" : "True",
     "DEDUP_CLUSTERS" : 200,
     "BLAT_THREADS" : 4,
     "DEDUPLICATION_SIMILARITY_THRESHOLD" : 0.9,
@@ -61,6 +63,14 @@
     "ALIGNER_ONT_OPTION" : "",
     "ALIGNER_HIFI_OPTION" : "",
     "THREADS" : 12
+  },
+
+  "SPADES" :
+  {
+    "THREADS" : 32,
+    "MEMORY" : "128",
+    "PHRED" : "33",
+    "KMERS" : "21,33,55,77,127"
   },
 
   "SCRIPTS" :

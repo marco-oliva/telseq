@@ -24,12 +24,6 @@ log_dir = "logs"
 #                                 All Rule                                     #
 ################################################################################
 
-# SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
-# if config["WORKFLOW"]["DEDUPLICATE"].upper() == "TRUE":
-#     DEDUP_STRING = config["EXTENSION"]["DEDUPLICATED"]
-# else:
-#     DEDUP_STRING = config["EXTENSION"]["NOT_DEDUPLICATED"]
-
 if config["WORKFLOW"]["LONG_READS"].upper() == "TRUE":
     SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
     if config["WORKFLOW"]["DEDUPLICATE"].upper() == "TRUE":
@@ -49,14 +43,14 @@ EXTS = [
     DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"] + config["EXTENSION"]["RESISTOME_RICHNESS"],
     DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"] + config["EXTENSION"]["RESISTOME_DIVERSITY"],
     DEDUP_STRING + "_" + config["MISC"]["MOBILOME_STRATEGY"] + config["EXTENSION"]["MOBILOME"],
-    "_deduplicated_read_lengts_hist.pdf",]
-    #"_colocalizations_plot.pdf"]
+    "_deduplicated_read_lengts_hist.pdf",
+    "_colocalizations_plot.svg"]
 
 rule all:
     input:
         expand("{sample_name}{ext}", sample_name=SAMPLES, ext=EXTS),
-        # "violin_plot_all_samples.pdf",
-        # "heatmap_all_samples.pdf"
+        "violin_plot_all_samples.svg",
+        "heatmap_all_samples.svg"
 
 if config["WORKFLOW"]["LONG_READS"].upper() == "TRUE":
     include: workflow.basedir + "/workflow/subworkflows/long_read.smk"
@@ -251,11 +245,11 @@ rule read_lengths_plot:
     params:
         num_of_bins = 100,
         std_deviations = 4,
-        read_lengths_script = workflow.basedir + "/" + "scripts/plot_read_lengths.py"
+        read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["PLOT_RL"]
     conda:
         "workflow/envs/plots.yaml"
     shell:
-        "python {params.read_lengths_script} "
+        "{params.read_lengths_script} "
         "-i {input} "
         "-s {params.std_deviations} "
         "-b {params.num_of_bins} "
@@ -264,18 +258,24 @@ rule read_lengths_plot:
 
 rule violin_plots_notebook:
     input:
-        megares_db = databases_dir + "/megares_modified_database_v2.00.fasta  ",
+        megares_db = databases_dir + "/megares_modified_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_modified_annotations_v2.00.csv",
         config_file = "config.ini",
-        data = expand("{sample_name}.fastq{ext}",sample_name=SAMPLES,ext=EXTS)
+        data = expand("{sample_name}{ext}",sample_name=SAMPLES,ext=EXTS)
     output:
-        "violin_plot_all_samples.pdf"
+        "violin_plot_all_samples.svg"
     params:
-        samples_list = SAMPLES
+        samples_list = SAMPLES,
+        script = workflow.basedir + "/workflow/scripts/violin_notebook.py"
     conda:
         "workflow/envs/plots.yaml"
-    notebook:
-        "workflow/notebooks/violin_notebook.py.ipynb"
+    shell:
+        "{params.script} "
+        "--config_file {input.config_file} "
+        "--output_plot {output} "
+        "--samples_list {params.samples_list}"
+    # notebook:
+    #     "workflow/notebooks/violin_notebook.py.ipynb"
 
 
 rule heatmap_notebook:
@@ -285,13 +285,19 @@ rule heatmap_notebook:
         config_file = "config.ini",
         data = expand("{sample_name}{ext}",sample_name=SAMPLES,ext=EXTS)
     output:
-        "heatmap_all_samples.pdf"
+        "heatmap_all_samples.svg"
     params:
-        samples_list = SAMPLES
+        samples_list = SAMPLES,
+        script = workflow.basedir +  "/workflow/scripts/heatmap_notebook.py"
     conda:
-        "workflow/envs/plots.yaml"
-    notebook:
-        "workflow/notebooks/heatmap_notebook.py.ipynb"
+        config["CONDA"]["PLOTS"]
+    shell:
+        "{params.script} "
+        "--config_file {input.config_file} "
+        "--output_plot {output} "
+        "--samples_list {params.samples_list}"
+    # notebook:
+    #     "workflow/notebooks/heatmap_notebook.py.ipynb"
 
 # Going to have to change code here as well
 rule colocalization_visualizations_notebook:
@@ -303,11 +309,19 @@ rule colocalization_visualizations_notebook:
         colocalizations = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
         config_file = "config.ini"
     output:
-        "{sample_name}_colocalizations_plot.pdf"
+        "{sample_name}_colocalizations_plot.svg"
+    params:
+        script = workflow.basedir + "/workflow/scripts/colocalizations_notebook.py"
     conda:
         "workflow/envs/plots.yaml"
-    notebook:
-        "workflow/notebooks/colocalizations_notebook.py.ipynb"
+    shell:
+        "{params.script} "
+        "--config_file {input.config_file} "
+        "--read_lengths {input.read_lengths} "
+        "--colocalizations {input.colocalizations} "
+        "--output_plot {output}"
+    # notebook:
+    #     "workflow/notebooks/colocalizations_notebook.py.ipynb"
 
 ############################################################
 ## Databases

@@ -24,7 +24,12 @@ log_dir = "logs"
 #                                 All Rule                                     #
 ################################################################################
 
-#DEDUP_STRING = ""
+# SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
+# if config["WORKFLOW"]["DEDUPLICATE"].upper() == "TRUE":
+#     DEDUP_STRING = config["EXTENSION"]["DEDUPLICATED"]
+# else:
+#     DEDUP_STRING = config["EXTENSION"]["NOT_DEDUPLICATED"]
+
 if config["WORKFLOW"]["LONG_READS"].upper() == "TRUE":
     SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq")
     if config["WORKFLOW"]["DEDUPLICATE"].upper() == "TRUE":
@@ -32,201 +37,31 @@ if config["WORKFLOW"]["LONG_READS"].upper() == "TRUE":
     else:
         DEDUP_STRING = config["EXTENSION"]["NOT_DEDUPLICATED"]
 else:
-    SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}.fastq") # CHANGE THIS TO FASTA, ALSO CONSIDER READ PAIRS
+    SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}_R1.fasta") # CHANGE THIS TO FASTA, ALSO CONSIDER READ PAIRS
     DEDUP_STRING = config["EXTENSION"]["ASSEMBLY"]
 
 EXTS = [
-    DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
+    DEDUP_STRING,
+    config["EXTENSION"]["READS_LENGTH"],
     DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
     DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS_RICHNESS"],
     DEDUP_STRING + config['EXTENSION']['OVERLAP'],
     DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"] + config["EXTENSION"]["RESISTOME_RICHNESS"],
     DEDUP_STRING + "_" + config["MISC"]["RESISTOME_STRATEGY"] + config["EXTENSION"]["RESISTOME_DIVERSITY"],
-    DEDUP_STRING + "_" + config["MISC"]["MOBILOME_STRATEGY"] + config["EXTENSION"]["MOBILOME"]]
+    DEDUP_STRING + "_" + config["MISC"]["MOBILOME_STRATEGY"] + config["EXTENSION"]["MOBILOME"],
+    "_deduplicated_read_lengts_hist.pdf",]
+    #"_colocalizations_plot.pdf"]
 
 rule all:
     input:
-        expand("{sample_name}{ext}", sample_name=SAMPLES, ext=EXTS)
-
-################################################################################
-#                             Long Read Steps                                  #
-################################################################################
+        expand("{sample_name}{ext}", sample_name=SAMPLES, ext=EXTS),
+        # "violin_plot_all_samples.pdf",
+        # "heatmap_all_samples.pdf"
 
 if config["WORKFLOW"]["LONG_READS"].upper() == "TRUE":
-
-########################### Deduplication ######################################
-    
-    if config["WORKFLOW"]["DEDUPLICATE"].upper() == "TRUE":
-        rule bin_reads_by_length:
-            input:
-                samples_dir + "/{sample_name}.fastq"
-            output:
-                touch(tmp_dir + "/{sample_name}.bin.reads.done")
-            params:
-                outdir = tmp_dir + "/{sample_name}_read_bins",
-                bin_script = workflow.basedir + "/" + config["SCRIPTS"]["BIN_READS"]
-            conda:
-                "workflow/envs/deduplication.yaml"
-            shell:
-                "mkdir -p {params.outdir}; "
-                "{params.bin_script} "
-                "--infile {input} "
-                "--outdir {params.outdir}"
-
-        rule cluster_reads:
-            input:
-                tmp_dir + "/{sample_name}.bin.reads.done"
-            output:
-                touch(tmp_dir + "/{sample_name}.cluster.reads.done")
-            params:
-                indir = tmp_dir + "/{sample_name}_read_bins",
-                outdir = tmp_dir + "/{sample_name}_read_clusters",
-                cluster_script = workflow.basedir + "/" + config["SCRIPTS"]["CLUSTER_READS"]
-            conda:
-                "workflow/envs/deduplication.yaml"
-            shell:
-                "mkdir -p {params.outdir}; "
-                "{params.cluster_script} "
-                "--indir {params.indir} "
-                "--outdir {params.outdir}; "
-                "rm -rf {params.indir}; "
-                "rm {input}"
-
-        rule blat_clustered_reads:
-            input:
-                tmp_dir + "/{sample_name}.cluster.reads.done"
-            output:
-                touch(tmp_dir + "/{sample_name}.blat.done")
-            params:
-                rc = tmp_dir + "/{sample_name}_read_clusters/",
-                o = tmp_dir + "/{sample_name}_psl_files/",
-                blat_script = workflow.basedir + "/" + config["SCRIPTS"]["RUN_BLAT"]
-            threads:
-                32
-            conda:
-                "workflow/envs/deduplication.yaml"
-            shell:
-                "mkdir -p {params.o}; "
-                "{params.blat_script} "
-                "--outdir {params.o} "
-                "--threads {threads} "
-                "--read_clusters {params.rc}; "
-                "rm -rf {params.rc}; "
-                "rm {input}"
-
-        rule find_duplicates:
-            input:
-                tmp_dir + "/{sample_name}.blat.done"
-            output:
-                touch(tmp_dir + "/{sample_name}.find.duplcates.done")
-            params:
-                similarity_threshold = config["MISC"]["DEDUPLICATION_SIMILARITY_THRESHOLD"],
-                pls_dir = tmp_dir + "/{sample_name}_psl_files/",
-                outdir = tmp_dir + "/{sample_name}_duplicate_txts/",
-                find_dups_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_DUPLICATES"]
-            conda:
-                "workflow/envs/deduplication.yaml"
-            shell:
-                "mkdir -p {params.outdir}; "
-                "{params.find_dups_script} "
-                "{params.outdir} "
-                "{params.pls_dir} "
-                "{params.similarity_threshold}; "
-                "rm -rf {params.pls_dir}; "
-                "rm {input}"
-
-        rule merge_duplicates_lists:
-            input:
-                tmp_dir + "/{sample_name}.find.duplcates.done"
-            output:
-                tmp_dir + "/{sample_name}.duplicates.txt"
-            params:
-                indir = tmp_dir + "/{sample_name}_duplicate_txts/"
-            shell:
-                "cat {params.indir}/* > {output}; "
-                "rm -rf {params.indir}"
-
-        # change output so that it is NOT gzipped *********
-        rule deduplicate:
-            input:
-                reads = samples_dir + "/{sample_name}.fastq",
-                duplicates_list = tmp_dir + "/{sample_name}.duplicates.txt"
-            output:
-                reads =  "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
-                dupes = "{sample_name}.dup.reads.fastq"
-            params:
-                dedup_script = workflow.basedir + "/" + config["SCRIPTS"]["DEDUPLICATE"]
-            conda:
-                "workflow/envs/deduplication.yaml"
-            shell:
-                "{params.dedup_script} "
-                "--reads {input.reads} "
-                "--duplicates {input.duplicates_list} "
-                "--out_reads {output.reads} "
-                "--out_dupes {output.dupes}"
-        
-        READS = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"]
-    else:
-        rule not_deduplicated_reads:
-            input:
-                samples_dir + "/{sample_name}.fastq"
-            output:
-                "{sample_name}" + config["EXTENSION"]["NOT_DEDUPLICATED"]
-            shell:
-                "ln -s {input} {output}"
-        
-        READS = "{sample_name}" + config["EXTENSION"]["NOT_DEDUPLICATED"]
-
-################################################################################
-#                           Short Reads Steps                                  #
-################################################################################
-
-elif config["WORKFLOW"]["LONG_READS"].upper() == "FALSE":
-
-############################## Assembly ########################################
-
-    rule meta_spades_assembly:
-        input:
-            f_reads = samples_dir + "/{sample_name}_R1.fastq",
-            r_reads = samples_dir + "/{sample_name}_R2.fastq"
-        params:
-            kmers = confgig["SPADES"]["KMERS"],
-            memory = config["SPADES"]["MEMORY"],
-            phred = config["SPADES"]["PHRED"]
-        conda:
-            "workflow/envs/assembly.yaml"
-        threads:
-            config["SPADES"]["THREADS"]
-        output:
-            temp(tmp_dir + "/spades_files/{sample_name}/")
-        shell:
-            "spades.py --meta "
-            "--phred-offset {params.phred} "
-            "-t {threads} "
-            "-m {params.memory} "
-            "-k {params.kmers} "
-            "-1 {input.f_reads} "
-            "-2 {input.r_reads} "
-            "-o {output}"
-
-    READS = tmp_dir + "/spades_files/{sample_name}/scaffolds.fasta"
-
-############################
-# Read Lengths #
-############################## Read Lengths ####################################
-
-rule read_lengths:
-    input:
-        READS
-    output:
-        # "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"]
-         "{sample_name}" + config["EXTENSION"]["READS_LENGTH"]
-    params:
-        read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
-    conda:
-        "workflow/envs/deduplication.yaml"
-    shell:
-        "python {params.read_lengths_script} {input} > {output}"
+    include: workflow.basedir + "/workflow/subworkflows/long_read.smk"
+else:
+    include: workflow.basedir + "/workflow/subworkflows/short_read.smk"
 
 ################################################################################
 #                                Alignment                                     #
@@ -234,7 +69,7 @@ rule read_lengths:
 
 rule align_to_megares:
     input:
-        reads = READS,
+        reads = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
         megares_seqs = ancient(databases_dir + "/" + "megares_modified_database_v2.00.fasta")
     output:
         "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"]
@@ -256,7 +91,8 @@ rule align_to_megares:
 
 rule align_to_mges:
     input:
-        reads = READS,
+        #reads = READS,
+        reads = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
         mges_database = ancient(databases_dir + "/" + "mges_combined.fasta")
     output:
         "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"]
@@ -361,7 +197,8 @@ rule resistome_and_mobilome:
 
 rule find_colocalizations:
     input:
-        reads = READS,
+        #reads = READS,
+        reads = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
         megares_sam = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
         mges_sam = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"],
         reads_length = "{sample_name}" + config["EXTENSION"]["READS_LENGTH"],
@@ -410,7 +247,7 @@ rule read_lengths_plot:
     input:
         "{sample_name}" + DEDUP_STRING
     output:
-        "{sample_name}" + "_deduplicated_read_lengts_hist.pdf"
+        "{sample_name}_deduplicated_read_lengts_hist.pdf"
     params:
         num_of_bins = 100,
         std_deviations = 4,
@@ -462,7 +299,7 @@ rule colocalization_visualizations_notebook:
         megares_db = databases_dir + "/megares_modified_database_v2.00.fasta",
         megares_annotation = databases_dir + "/megares_modified_annotations_v2.00.csv",
         mges_db = databases_dir + "/mges_combined.fasta",
-        dedup_reads_lenght = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["READS_LENGTH"],
+        read_lengths = "{sample_name}" + config["EXTENSION"]["READS_LENGTH"],
         colocalizations = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["COLOCALIZATIONS"],
         config_file = "config.ini"
     output:

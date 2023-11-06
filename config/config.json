@@ -12,7 +12,7 @@
     "DUPLICATES" : "_duplicates.csv",
     "DEDUPLICATED" : "_deduplicated.fastq",
     "NOT_DEDUPLICATED" : "_NOT_deduplicated.fastq",
-    "ASSEMBLY" : "_assembled",
+    "ASSEMBLY" : "_assembled.fasta",
     "A_TO_MEGARES" : "_ato_megaresv2.sam",
     "A_TO_MGES" : "_ato_MGES.sam",
     "A_TO_KEGG" : "_ato_KEGG.sam",
@@ -87,6 +87,16 @@
     "BIN_READS" : "workflow/scripts/bin_reads.py",
     "RUN_BLAT" : "workflow/scripts/run_blat.py",
     "FIND_OVERLAP" : "workflow/scripts/find_overlap.py"
+  },
+
+  "CONDA" :
+  {
+    "ALIGNMENT" : "workflow/envs/alignment.yaml",
+    "ASSEMBLY" : "workflow/envs/assembly.yaml",
+    "DEDUP" : "workflow/envs/deduplication.yaml",
+    "DB" : "workflow/envs/download_databases.yaml",
+    "PIPELINE" : "workflow/envs/pipeline.yaml",
+    "PLOTS" : "workflow/envs/plots.yaml"
   },
 
   "STATS" :

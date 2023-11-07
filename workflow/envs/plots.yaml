@@ -9,15 +9,10 @@ channels:
   - anaconda
   - plotly
 dependencies:
-  - python=3.8
-  - blat
+  - python=3.10
   - matplotlib
   - biopython
-  - samtools=1.9
-  - pysam
   - pandas
   - seaborn
   - plotly
-  - notebook
-  - nb_conda_kernels
   - tqdm

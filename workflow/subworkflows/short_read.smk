@@ -27,7 +27,7 @@ rule meta_spades_assembly:
         outdir = tmp_dir + "/spades_files/{sample_name}/",
         reads = tmp_dir + "/spades_files/{sample_name}/scaffolds.fasta"
     conda:
-        "workflow/envs/assembly.yaml"
+        workflow.basedir + "/" + config["CONDA"]["ASSEMBLY"]
     threads:
         config["SPADES"]["THREADS"]
     shell:
@@ -51,6 +51,6 @@ rule read_lengths:
     params:
         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["READS_LENGTH"]
     conda:
-        "workflow/envs/deduplication.yaml"
+        workflow.basedir + "/" + config["CONDA"]["ASSEMBLY"]
     shell:
         "python {params.read_lengths_script} {input} > {output}"

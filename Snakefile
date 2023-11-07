@@ -72,7 +72,7 @@ rule align_to_megares:
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
     conda:
-        "workflow/envs/alignment.yaml"
+        workflow.basedir + "/" + config["CONDA"]["ALIGNMENT"]
     threads:
         config["MINIMAP2"]["THREADS"]
     shell:
@@ -95,7 +95,7 @@ rule align_to_mges:
                         + config["MINIMAP2"]["ALIGNER_ONT_OPTION"] + " "
                         + config["MINIMAP2"]["ALIGNER_HIFI_OPTION"]
     conda:
-        "workflow/envs/alignment.yaml"
+        workflow.basedir + "/" + config["CONDA"]["ALIGNMENT"]
     threads:
         config["MINIMAP2"]["THREADS"]
     shell:
@@ -109,6 +109,8 @@ rule align_to_mges:
 rule pass_config_file:
     output:
         out_config_file = "config.ini"
+    conda:
+        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     run:
         import configparser
         with open(output.out_config_file,'w') as configfile_out:
@@ -132,7 +134,7 @@ rule overlap:
         overlap_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_OVERLAP"],
         output_prefix = "{sample_name}" + DEDUP_STRING
     conda:
-        "workflow/envs/pipeline.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     output:
         overlap = "{sample_name}" + DEDUP_STRING + config['EXTENSION']['OVERLAP']
     shell:
@@ -148,6 +150,8 @@ rule merge_overlap_info:
         expand("{sample_name}" + DEDUP_STRING + config['EXTENSION']['OVERLAP'], sample_name = SAMPLES)
     output: 
         merged_info = 'merged_overlaped_mges_info.csv'
+    conda:
+        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     run:
         import csv
         merged_overlaped_mges_info = set()
@@ -179,7 +183,7 @@ rule resistome_and_mobilome:
         resistome_mobilome_script = workflow.basedir + "/" + config["SCRIPTS"]["GEN_RESISTOME_AND_MOBILOME"],
         output_prefix = "{sample_name}" + DEDUP_STRING
     conda:
-        "workflow/envs/pipeline.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     shell:
         "python {params.resistome_mobilome_script} "
         "-r {wildcards.sample_name}.fastq "
@@ -205,7 +209,7 @@ rule find_colocalizations:
         find_colocalizations_script = workflow.basedir + "/" + config["SCRIPTS"]["FIND_COLOCALIZATIONS"],
         output_directory = os.getcwd()
     conda:
-        "workflow/envs/pipeline.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     shell:
         "python {params.find_colocalizations_script} "
         "-r {input.reads} "
@@ -225,7 +229,7 @@ rule colocalization_richness:
     params:
         find_colocalizations_script = workflow.basedir + "/" + config["SCRIPTS"]["COLOCALIZATIONS_RICHNESS"]
     conda:
-        "workflow/envs/pipeline.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     shell:
         "python {params.find_colocalizations_script} "
         "-i {input.colocalizations} "
@@ -247,7 +251,7 @@ rule read_lengths_plot:
         std_deviations = 4,
         read_lengths_script = workflow.basedir + "/" + config["SCRIPTS"]["PLOT_RL"]
     conda:
-        "workflow/envs/plots.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PLOTS"]
     shell:
         "{params.read_lengths_script} "
         "-i {input} "
@@ -268,7 +272,7 @@ rule violin_plots_notebook:
         samples_list = SAMPLES,
         script = workflow.basedir + "/workflow/scripts/violin_notebook.py"
     conda:
-        "workflow/envs/plots.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PLOTS"]
     shell:
         "{params.script} "
         "--config_file {input.config_file} "
@@ -290,7 +294,7 @@ rule heatmap_notebook:
         samples_list = SAMPLES,
         script = workflow.basedir +  "/workflow/scripts/heatmap_notebook.py"
     conda:
-        config["CONDA"]["PLOTS"]
+        workflow.basedir + "/" + config["CONDA"]["PLOTS"]
     shell:
         "{params.script} "
         "--config_file {input.config_file} "
@@ -313,7 +317,7 @@ rule colocalization_visualizations_notebook:
     params:
         script = workflow.basedir + "/workflow/scripts/colocalizations_notebook.py"
     conda:
-        "workflow/envs/plots.yaml"
+        workflow.basedir + "/" + config["CONDA"]["PLOTS"]
     shell:
         "{params.script} "
         "--config_file {input.config_file} "
@@ -335,7 +339,7 @@ rule get_megares:
         megares_seqs = "https://www.meglab.org/downloads/megares_v3.00/megares_database_v3.00.fasta",
         megares_ann = "https://www.meglab.org/downloads/megares_v3.00/megares_annotations_v3.00.csv"
     conda:
-        "workflow/envs/download_databases.yaml"
+        workflow.basedir + "/" + config["CONDA"]["DB"]
     shell:
         "mkdir -p {databases_dir}; "
         "wget {params.megares_seqs} -O {output.megares_seqs}; "
@@ -350,7 +354,7 @@ rule get_plasmid_finder_db:
     output:
         temp(databases_dir + "/plasmid_finder_db.fasta")
     conda:
-        "workflow/envs/download_databases.yaml"
+        workflow.basedir + "/" + config["CONDA"]["DB"]
     shell:
         "mkdir -p {tmp_dir}; "
         "mkdir -p {databases_dir}; "
@@ -367,7 +371,7 @@ rule get_aclame_db:
     params:
         aclame = "https://drive.google.com/file/d/1ipiFom9ha_87k-bNzK_nIM4ABO1l_WP9/view?usp=sharing"
     conda:
-        "workflow/envs/download_databases.yaml"
+        workflow.basedir + "/" + config["CONDA"]["DB"]
     shell:
         "mkdir -p {databases_dir}; "
         "gdown {params.aclame} --fuzzy -O {output}"
@@ -378,7 +382,7 @@ rule get_iceberg_db:
     params:
         iceberg = "https://drive.google.com/file/d/14MNE_738gIgmQU68y-529DitW_zqxIXy/view?usp=sharing"
     conda:
-        "workflow/envs/download_databases.yaml"
+        workflow.basedir + "/" + config["CONDA"]["DB"]
     shell:
         "mkdir -p {databases_dir}; "
         "gdown {params.iceberg} --fuzzy -O {output}"
@@ -391,7 +395,7 @@ rule get_MGEs_DBs:
     output:
         databases_dir + "/mges_combined.fasta"
     conda:
-        "workflow/envs/download_databases.yaml"
+        workflow.basedir + "/" + config["CONDA"]["DB"]
     shell:
         "cat {input} > {output}"
 

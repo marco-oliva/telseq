@@ -116,6 +116,8 @@ rule merge_duplicates_lists:
         tmp_dir + "/{sample_name}.duplicates.txt"
     params:
         indir = tmp_dir + "/{sample_name}_duplicate_txts/"
+    conda:
+        workflow.basedir + "/" + config["CONDA"]["DEDUP"]
     shell:
         "cat {params.indir}/* > {output}; "
         "rm -rf {params.indir}"

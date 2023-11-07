@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Copyright (c) Boucher Lab. All rights reserved.
 # Licensed under the GNU license.

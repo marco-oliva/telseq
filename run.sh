@@ -6,7 +6,7 @@
 #SBATCH --mail-user=<email>
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=1gb
+#SBATCH --mem=8gb
 #SBATCH --time=96:00:00
 #SBATCH --output=logs/%j_disp.log
 #SBATCH --error=logs/%j_disp.log

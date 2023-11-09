@@ -31,8 +31,8 @@ if config["WORKFLOW"]["LONG_READS"].upper() == "TRUE":
     else:
         DEDUP_STRING = config["EXTENSION"]["NOT_DEDUPLICATED"]
 else:
-    SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}_R1.fasta") # CHANGE THIS TO FASTA, ALSO CONSIDER READ PAIRS
-    DEDUP_STRING = config["EXTENSION"]["ASSEMBLY"]
+    SAMPLES, = glob_wildcards(samples_dir + "/{sample_name}_R1.fastq") # CHANGE THIS TO FASTA, ALSO CONSIDER READ PAIRS
+    DEDUP_STRING = config["EXTENSION"]["ASSEMBLED"]
 
 EXTS = [
     DEDUP_STRING,
@@ -63,7 +63,7 @@ else:
 
 rule align_to_megares:
     input:
-        reads = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
+        reads = "{sample_name}" + DEDUP_STRING,
         megares_seqs = ancient(databases_dir + "/" + "megares_modified_database_v2.00.fasta")
     output:
         "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"]
@@ -86,7 +86,7 @@ rule align_to_megares:
 rule align_to_mges:
     input:
         #reads = READS,
-        reads = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
+        reads = "{sample_name}" + DEDUP_STRING,
         mges_database = ancient(databases_dir + "/" + "mges_combined.fasta")
     output:
         "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"]
@@ -109,8 +109,8 @@ rule align_to_mges:
 rule pass_config_file:
     output:
         out_config_file = "config.ini"
-    conda:
-        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
+    # conda:
+    #     workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     run:
         import configparser
         with open(output.out_config_file,'w') as configfile_out:
@@ -150,8 +150,8 @@ rule merge_overlap_info:
         expand("{sample_name}" + DEDUP_STRING + config['EXTENSION']['OVERLAP'], sample_name = SAMPLES)
     output: 
         merged_info = 'merged_overlaped_mges_info.csv'
-    conda:
-        workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
+    # conda:
+    #     workflow.basedir + "/" + config["CONDA"]["PIPELINE"]
     run:
         import csv
         merged_overlaped_mges_info = set()
@@ -196,7 +196,7 @@ rule resistome_and_mobilome:
 rule find_colocalizations:
     input:
         #reads = READS,
-        reads = "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"],
+        reads = "{sample_name}" + DEDUP_STRING,
         megares_sam = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MEGARES"],
         mges_sam = "{sample_name}" + DEDUP_STRING + config["EXTENSION"]["A_TO_MGES"],
         reads_length = "{sample_name}" + config["EXTENSION"]["READS_LENGTH"],
@@ -270,11 +270,13 @@ rule violin_plots_notebook:
         "violin_plot_all_samples.svg"
     params:
         samples_list = SAMPLES,
+        dedup_string = DEDUP_STRING,
         script = workflow.basedir + "/workflow/scripts/violin_notebook.py"
     conda:
         workflow.basedir + "/" + config["CONDA"]["PLOTS"]
     shell:
         "{params.script} "
+        "--dedup_string {params.dedup_string} "
         "--config_file {input.config_file} "
         "--output_plot {output} "
         "--samples_list {params.samples_list}"
@@ -292,11 +294,13 @@ rule heatmap_notebook:
         "heatmap_all_samples.svg"
     params:
         samples_list = SAMPLES,
+        dedup_string = DEDUP_STRING,
         script = workflow.basedir +  "/workflow/scripts/heatmap_notebook.py"
     conda:
         workflow.basedir + "/" + config["CONDA"]["PLOTS"]
     shell:
         "{params.script} "
+        "--dedup_string {params.dedup_string} "
         "--config_file {input.config_file} "
         "--output_plot {output} "
         "--samples_list {params.samples_list}"

@@ -14,18 +14,20 @@ import os, ast, glob
 
 ############################## Assembly ########################################
 
+# Should split the meta_spades step from the fasta2fastq step
 rule meta_spades_assembly:
     input:
-        f_reads = samples_dir + "/{sample_name}_R1.fasta",
-        r_reads = samples_dir + "/{sample_name}_R2.fasta"
+        f_reads = samples_dir + "/{sample_name}_R1.fastq",
+        r_reads = samples_dir + "/{sample_name}_R2.fastq"
     output:
-        "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"]
+        "{sample_name}" + config["EXTENSION"]["ASSEMBLED"],
     params:
-        kmers = confgig["SPADES"]["KMERS"],
+        kmers = config["SPADES"]["KMERS"],
         memory = config["SPADES"]["MEMORY"],
         phred = config["SPADES"]["PHRED"],
         outdir = tmp_dir + "/spades_files/{sample_name}/",
-        reads = tmp_dir + "/spades_files/{sample_name}/scaffolds.fasta"
+        reads = tmp_dir + "/spades_files/{sample_name}/scaffolds.fasta",
+        fasta2fastq_script = workflow.basedir + "/" + config["SCRIPTS"]["FASTA2FASTQ"]
     conda:
         workflow.basedir + "/" + config["CONDA"]["ASSEMBLY"]
     threads:
@@ -39,13 +41,15 @@ rule meta_spades_assembly:
         "-1 {input.f_reads} "
         "-2 {input.r_reads} "
         "-o {params.outdir}; "
-        "cp {params.reads} {output}"
+        "{params.fasta2fastq_script} "
+        "--fasta {params.reads} "
+        "--fastq {output}"
 
 ############################## Read Lengths ####################################
 
 rule read_lengths:
     input:
-        "{sample_name}" + config["EXTENSION"]["DEDUPLICATED"]
+        "{sample_name}" + config["EXTENSION"]["ASSEMBLED"]
     output:
          "{sample_name}" + config["EXTENSION"]["READS_LENGTH"]
     params:

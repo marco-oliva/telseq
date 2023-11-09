@@ -5,8 +5,8 @@ channels:
   - anaconda
 dependencies:
   - biopython
-  - python=3.7
+  - python=3.8.2
   - blat
   - scipy
   - scikit-learn
-  - spades
+  - spades=3.15.2

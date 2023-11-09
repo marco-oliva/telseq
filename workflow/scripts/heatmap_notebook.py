@@ -14,6 +14,7 @@ from argparse import ArgumentParser
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--samples_list', nargs='+')
+    parser.add_argument('--dedup_string')
     parser.add_argument('--config_file')
     parser.add_argument('--output_plot')
     return parser.parse_args()
@@ -57,8 +58,8 @@ def read_megares_v2_ontology(config):
     return megares_ontology, hierarchy_dict
 
 
-def get_resistome(config, sample_name):
-    return sample_name + config['EXTENSION']['DEDUPLICATED'] + "_" + config['MISC']['RESISTOME_STRATEGY'] + config['EXTENSION']['RESISTOME_DIVERSITY']
+def get_resistome(config, sample_name, dedup_string):
+    return sample_name + dedup_string + "_" + config['MISC']['RESISTOME_STRATEGY'] + config['EXTENSION']['RESISTOME_DIVERSITY']
 
 
 def get_reads_length(config, sample_name):
@@ -101,7 +102,7 @@ def main():
         group_samples[ontology['group']] = set()
 
     for sample in samples_list:
-        with open(get_resistome(config, sample)) as resistome_file:
+        with open(get_resistome(config, sample, args.dedup_string)) as resistome_file:
             resistome_reader = csv.reader(resistome_file)
             for row in resistome_reader:
                 # Remove statistics and headers

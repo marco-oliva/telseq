@@ -1,4 +1,7 @@
 # TELSeq
+
+This repo is now depreciated and the most current version of the workflow is here: https://github.com/jonathan-bravo/TELCoMB
+
 A workflow for contextualization of antibiotic resistance in microbiomes.
 
 ### Requirements 
